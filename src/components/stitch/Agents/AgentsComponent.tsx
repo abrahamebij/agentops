@@ -2,6 +2,7 @@
 
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
+import { MdAccountTree } from "react-icons/md";
 
 export function AgentsComponent() {
   return (
@@ -247,9 +248,7 @@ export function AgentsComponent() {
               </div>
               <div className="flex items-center gap-4 z-10">
                 <div className="w-10 h-10 rounded bg-surface flex items-center justify-center shadow-sm border border-outline-variant/30">
-                  <span className="material-symbols-outlined text-primary">
-                    account_tree
-                  </span>
+                  <MdAccountTree className="text-primary text-xl" />
                 </div>
                 <span className="font-mono-data text-mono-data text-on-surface">
                   Consensus Rule: 2 of 3 agents must approve to execute.

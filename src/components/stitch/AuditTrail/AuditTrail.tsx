@@ -2,6 +2,21 @@
 
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
+import {
+  MdPsychology,
+  MdQueryStats,
+  MdAnalytics,
+  MdShield,
+  MdScale,
+  MdWarning,
+  MdRule,
+  MdCheckCircle,
+  MdHub,
+  MdCheck,
+  MdDoneAll,
+  MdTag,
+  MdOpenInNew,
+} from "react-icons/md";
 
 export function AuditTrail() {
   return (
@@ -37,25 +52,19 @@ export function AuditTrail() {
             <div className="flex flex-col relative w-full">
               <div className="absolute -left-12 top-0 w-[1px] h-full bg-gradient-to-b from-primary/30 via-secondary-container to-secondary-container/20"></div>
               <h2 className="font-headline-md text-headline-md text-on-background mb-8 flex items-center gap-3">
-                <span className="material-symbols-outlined text-outline-variant">
-                  psychology
-                </span>
+                <MdPsychology className="text-outline-variant text-2xl" />
                 Agent Consensus
               </h2>
               <div className="flex flex-col gap-6">
                 {/* Agent 1 */}
                 <div className="flex flex-col p-6 rounded-lg bg-surface-container shadow-md relative overflow-hidden group border border-outline-variant/30">
                   <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="material-symbols-outlined text-[64px] text-on-surface">
-                      query_stats
-                    </span>
+                    <MdQueryStats className="text-[64px] text-on-surface" />
                   </div>
                   <div className="flex items-start justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center text-on-surface">
-                        <span className="material-symbols-outlined text-lg">
-                          monitoring
-                        </span>
+                        <MdAnalytics className="text-lg" />
                       </div>
                       <div>
                         <h3 className="font-headline-md text-body-base font-semibold text-on-surface">
@@ -93,16 +102,12 @@ export function AuditTrail() {
                 {/* Agent 2 */}
                 <div className="flex flex-col p-6 rounded-lg bg-surface-container shadow-md relative overflow-hidden group border border-outline-variant/30">
                   <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="material-symbols-outlined text-[64px] text-on-surface">
-                      gpp_good
-                    </span>
+                    <MdShield className="text-[64px] text-on-surface" />
                   </div>
                   <div className="flex items-start justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center text-on-surface">
-                        <span className="material-symbols-outlined text-lg">
-                          shield_locked
-                        </span>
+                        <MdShield className="text-lg" />
                       </div>
                       <div>
                         <h3 className="font-headline-md text-body-base font-semibold text-on-surface">
@@ -140,16 +145,12 @@ export function AuditTrail() {
                 {/* Agent 3 */}
                 <div className="flex flex-col p-6 rounded-lg bg-surface-container shadow-md relative overflow-hidden group border border-outline-variant/30">
                   <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="material-symbols-outlined text-[64px] text-on-surface">
-                      balance
-                    </span>
+                    <MdScale className="text-[64px] text-on-surface" />
                   </div>
                   <div className="flex items-start justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center text-on-surface">
-                        <span className="material-symbols-outlined text-lg">
-                          warning
-                        </span>
+                        <MdWarning className="text-lg" />
                       </div>
                       <div>
                         <h3 className="font-headline-md text-body-base font-semibold text-on-surface">
@@ -190,18 +191,14 @@ export function AuditTrail() {
             <div className="flex flex-col relative w-full">
               <div className="absolute -left-12 top-0 w-[1px] h-full bg-gradient-to-b from-secondary-container/20 via-outline-variant to-outline-variant/10"></div>
               <h2 className="font-headline-md text-headline-md text-on-background mb-8 flex items-center gap-3">
-                <span className="material-symbols-outlined text-outline-variant">
-                  rule
-                </span>
+                <MdRule className="text-outline-variant text-2xl" />
                 Deterministic Policy Validation
               </h2>
               <div className="bg-surface-container rounded-lg p-2 shadow-md border border-outline-variant/30">
                 <ul className="flex flex-col">
                   <li className="flex items-center justify-between p-4 border-b border-surface-variant/50 hover:bg-surface-container-high transition-colors">
                     <div className="flex items-center gap-4">
-                      <span className="material-symbols-outlined text-primary">
-                        check_circle
-                      </span>
+                      <MdCheckCircle className="text-primary text-xl" />
                       <span className="font-body-base text-body-base text-on-surface">
                         Maximum Transaction Size Limit
                       </span>
@@ -217,9 +214,7 @@ export function AuditTrail() {
                   </li>
                   <li className="flex items-center justify-between p-4 border-b border-surface-variant/50 hover:bg-surface-container-high transition-colors">
                     <div className="flex items-center gap-4">
-                      <span className="material-symbols-outlined text-primary">
-                        check_circle
-                      </span>
+                      <MdCheckCircle className="text-primary text-xl" />
                       <span className="font-body-base text-body-base text-on-surface">
                         Gas Price Ceiling Check
                       </span>
@@ -235,9 +230,7 @@ export function AuditTrail() {
                   </li>
                   <li className="flex items-center justify-between p-4 border-b border-surface-variant/50 hover:bg-surface-container-high transition-colors">
                     <div className="flex items-center gap-4">
-                      <span className="material-symbols-outlined text-primary">
-                        check_circle
-                      </span>
+                      <MdCheckCircle className="text-primary text-xl" />
                       <span className="font-body-base text-body-base text-on-surface">
                         Authorized Target Contract Allowlist
                       </span>
@@ -253,9 +246,7 @@ export function AuditTrail() {
                   </li>
                   <li className="flex items-center justify-between p-4 hover:bg-surface-container-high transition-colors">
                     <div className="flex items-center gap-4">
-                      <span className="material-symbols-outlined text-primary">
-                        check_circle
-                      </span>
+                      <MdCheckCircle className="text-primary text-xl" />
                       <span className="font-body-base text-body-base text-on-surface">
                         Execution Time Window Valid
                       </span>
@@ -278,9 +269,7 @@ export function AuditTrail() {
               <div className="absolute -left-12 top-0 w-[1px] h-full bg-gradient-to-b from-outline-variant/10 via-surface-variant to-transparent"></div>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="font-headline-md text-headline-md text-on-background flex items-center gap-3">
-                  <span className="material-symbols-outlined text-outline-variant">
-                    hub
-                  </span>
+                  <MdHub className="text-outline-variant text-2xl" />
                   KeeperHub Execution
                 </h2>
                 <div className="flex gap-4">
@@ -297,9 +286,7 @@ export function AuditTrail() {
                   <div className="absolute left-3 top-4 bottom-4 w-[1px] bg-surface-variant"></div>
                   <div className="flex items-start gap-6 relative z-10">
                     <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="material-symbols-outlined text-[14px] text-on-primary">
-                        check
-                      </span>
+                      <MdCheck className="text-[14px] text-on-primary" />
                     </div>
                     <div className="flex flex-col w-full">
                       <div className="flex items-center justify-between mb-1">
@@ -320,9 +307,7 @@ export function AuditTrail() {
                   </div>
                   <div className="flex items-start gap-6 relative z-10">
                     <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="material-symbols-outlined text-[14px] text-on-primary">
-                        check
-                      </span>
+                      <MdCheck className="text-[14px] text-on-primary" />
                     </div>
                     <div className="flex flex-col w-full">
                       <div className="flex items-center justify-between mb-1">
@@ -340,9 +325,7 @@ export function AuditTrail() {
                   </div>
                   <div className="flex items-start gap-6 relative z-10">
                     <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5 shadow-[0_0_12px_rgba(174,198,255,0.4)]">
-                      <span className="material-symbols-outlined text-[14px] text-on-primary">
-                        done_all
-                      </span>
+                      <MdDoneAll className="text-[14px] text-on-primary" />
                     </div>
                     <div className="flex flex-col w-full">
                       <div className="flex items-center justify-between mb-1">
@@ -358,23 +341,19 @@ export function AuditTrail() {
                       </p>
                       <div className="flex items-center justify-between bg-surface p-4 rounded shadow-inner border border-outline-variant/20">
                         <div className="flex items-center gap-3">
-                          <span className="material-symbols-outlined text-outline-variant">
-                            tag
-                          </span>
+                          <MdTag className="text-outline-variant text-xl" />
                           <span className="font-mono-data text-mono-data text-on-surface truncate max-w-[200px] sm:max-w-md">
                             0x8a7b9c2d1e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
                           </span>
                         </div>
                         <a
-                          href="https://etherscan.io"
+                          href="https://sepolia.etherscan.io"
                           target="_blank"
                           rel="noreferrer"
                           className="bg-primary hover:bg-primary/90 text-on-primary px-4 py-2 rounded font-label-caps text-label-caps transition-colors flex items-center gap-2 shrink-0"
                         >
                           EXPLORER
-                          <span className="material-symbols-outlined text-[14px]">
-                            open_in_new
-                          </span>
+                          <MdOpenInNew className="text-[14px]" />
                         </a>
                       </div>
                     </div>

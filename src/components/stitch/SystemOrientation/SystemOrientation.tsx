@@ -3,6 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PublicHeader } from "../PublicHeader";
+import {
+  MdCheck,
+  MdArrowForward,
+  MdHub,
+  MdCheckCircle,
+  MdPlayArrow,
+  MdTerminal,
+} from "react-icons/md";
 
 export function SystemOrientation() {
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -75,7 +83,7 @@ export function SystemOrientation() {
                     }`}
                   >
                     {currentStep > 1 ? (
-                      <span className="material-symbols-outlined text-[16px]">check</span>
+                      <MdCheck className="text-[16px]" />
                     ) : (
                       "1"
                     )}
@@ -111,7 +119,7 @@ export function SystemOrientation() {
                     }`}
                   >
                     {currentStep > 2 ? (
-                      <span className="material-symbols-outlined text-[16px]">check</span>
+                      <MdCheck className="text-[16px]" />
                     ) : (
                       "2"
                     )}
@@ -207,9 +215,7 @@ export function SystemOrientation() {
                         className="px-6 py-3 bg-on-surface text-surface hover:bg-on-surface-variant rounded shadow-md font-label-caps text-label-caps transition-colors flex items-center gap-2"
                       >
                         CONTINUE{" "}
-                        <span className="material-symbols-outlined text-[16px]">
-                          arrow_forward
-                        </span>
+                        <MdArrowForward className="text-[16px]" />
                       </button>
                     </div>
                   </div>
@@ -252,9 +258,7 @@ export function SystemOrientation() {
                         className="px-6 py-3 bg-on-surface text-surface hover:bg-on-surface-variant rounded shadow-md font-label-caps text-label-caps transition-colors flex items-center gap-2"
                       >
                         CONTINUE{" "}
-                        <span className="material-symbols-outlined text-[16px]">
-                          arrow_forward
-                        </span>
+                        <MdArrowForward className="text-[16px]" />
                       </button>
                     </div>
                   </div>
@@ -277,9 +281,7 @@ export function SystemOrientation() {
                         <div className="absolute inset-2 rounded-full border border-primary/50 animate-[spin_7s_linear_infinite_reverse]"></div>
                         <div className="absolute inset-4 rounded-full border border-primary animate-[spin_5s_linear_infinite]"></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-4xl text-primary">
-                            hub
-                          </span>
+                          <MdHub className="text-4xl text-primary" />
                         </div>
                       </div>
                       <button
@@ -292,9 +294,11 @@ export function SystemOrientation() {
                       >
                         <span className="relative z-10 flex items-center gap-2">
                           {demoExecuted ? "SIMULATION ACTIVE" : "TRIGGER DEMO EXECUTION"}
-                          <span className="material-symbols-outlined text-[18px]">
-                            {demoExecuted ? "check_circle" : "play_arrow"}
-                          </span>
+                          {demoExecuted ? (
+                            <MdCheckCircle className="text-[18px]" />
+                          ) : (
+                            <MdPlayArrow className="text-[18px]" />
+                          )}
                         </span>
                       </button>
                     </div>
@@ -310,9 +314,7 @@ export function SystemOrientation() {
                         className="px-6 py-3 bg-primary text-on-primary hover:bg-primary-container font-label-caps text-label-caps transition-colors flex items-center gap-2 rounded"
                       >
                         PROCEED TO CONSOLE{" "}
-                        <span className="material-symbols-outlined text-[16px]">
-                          terminal
-                        </span>
+                        <MdTerminal className="text-[16px]" />
                       </Link>
                     </div>
                   </div>

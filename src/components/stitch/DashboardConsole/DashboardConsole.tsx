@@ -1,8 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
+import { MdFilterList, MdCheckCircle, MdWarning, MdError } from "react-icons/md";
 
 export function DashboardConsole() {
   return (
@@ -81,9 +80,7 @@ export function DashboardConsole() {
                   </div>
                 </div>
                 <button className="flex items-center gap-2 px-4 py-2 bg-surface-container hover:bg-surface-container-high transition-colors rounded text-primary font-label-caps text-label-caps border border-outline-variant/30">
-                  <span className="material-symbols-outlined text-[18px]">
-                    filter_list
-                  </span>
+                  <MdFilterList className="text-[18px]" />
                   FILTER VIEW
                 </button>
               </div>
@@ -97,9 +94,7 @@ export function DashboardConsole() {
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">
-                        check_circle
-                      </span>
+                      <MdCheckCircle className="text-primary text-[20px]" />
                       <span className="font-mono-data text-mono-data text-on-surface">
                         0x7a9f...e142
                       </span>
@@ -134,9 +129,7 @@ export function DashboardConsole() {
                   <div className="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-tertiary text-[20px]">
-                        warning
-                      </span>
+                      <MdWarning className="text-tertiary text-[20px]" />
                       <span className="font-mono-data text-mono-data text-on-surface">
                         0xb21c...99fd
                       </span>
@@ -168,9 +161,7 @@ export function DashboardConsole() {
                   <div className="absolute top-0 left-0 w-1 h-full bg-error"></div>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-error text-[20px]">
-                        error
-                      </span>
+                      <MdError className="text-error text-[20px]" />
                       <span className="font-mono-data text-mono-data text-on-surface">
                         0x11f4...0a9b
                       </span>
@@ -202,9 +193,7 @@ export function DashboardConsole() {
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">
-                        check_circle
-                      </span>
+                      <MdCheckCircle className="text-primary text-[20px]" />
                       <span className="font-mono-data text-mono-data text-on-surface">
                         0x88de...3b21
                       </span>
@@ -236,9 +225,7 @@ export function DashboardConsole() {
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">
-                        check_circle
-                      </span>
+                      <MdCheckCircle className="text-primary text-[20px]" />
                       <span className="font-mono-data text-mono-data text-on-surface">
                         0x4c2a...f71e
                       </span>

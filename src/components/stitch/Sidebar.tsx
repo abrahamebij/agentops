@@ -2,15 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MdDashboard, MdSmartToy, MdPolicy, MdTerminal, MdSettings } from "react-icons/md";
+import { IconType } from "react-icons";
+
+interface NavItem {
+  name: string;
+  path: string;
+  Icon: IconType;
+}
 
 export function Sidebar() {
   const pathname = usePathname();
 
-  const navItems = [
-    { name: "DASHBOARD", path: "/dashboard", icon: "dashboard" },
-    { name: "AGENTS", path: "/agents", icon: "smart_toy" },
-    { name: "POLICIES", path: "/policies", icon: "policy" },
-    { name: "EXECUTIONS", path: "/audit-trail", icon: "terminal" },
+  const navItems: NavItem[] = [
+    { name: "DASHBOARD", path: "/dashboard", Icon: MdDashboard },
+    { name: "AGENTS", path: "/agents", Icon: MdSmartToy },
+    { name: "POLICIES", path: "/policies", Icon: MdPolicy },
+    { name: "EXECUTIONS", path: "/audit-trail", Icon: MdTerminal },
   ];
 
   return (
@@ -26,6 +34,7 @@ export function Sidebar() {
       <nav className="flex-1 px-4 py-6 space-y-2">
         {navItems.map((item) => {
           const isActive = pathname === item.path;
+          const Icon = item.Icon;
           return (
             <Link
               key={item.name}
@@ -36,7 +45,7 @@ export function Sidebar() {
                   : "border-transparent text-on-surface-variant hover:bg-surface-container-low"
               }`}
             >
-              <span className="material-symbols-outlined mr-3">{item.icon}</span>
+              <Icon className="mr-3 text-lg" />
               {item.name}
             </Link>
           );
@@ -47,7 +56,7 @@ export function Sidebar() {
           href="/"
           className={`flex items-center px-4 py-3 border-l-2 border-transparent text-on-surface-variant hover:bg-surface-container-low transition-all font-label-caps text-label-caps`}
         >
-          <span className="material-symbols-outlined mr-3">settings</span>
+          <MdSettings className="mr-3 text-lg" />
           OVERVIEW
         </Link>
       </div>

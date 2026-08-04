@@ -2,6 +2,7 @@
 
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
+import { MdGavel, MdEdit } from "react-icons/md";
 
 export function PoliciesComponent() {
   return (
@@ -31,17 +32,13 @@ export function PoliciesComponent() {
               {/* Card Header */}
               <div className="flex justify-between items-center pb-6 border-b border-outline-variant/30">
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary text-2xl">
-                    gavel
-                  </span>
+                  <MdGavel className="text-primary text-2xl" />
                   <h2 className="font-headline-md text-headline-md text-on-surface">
                     Global Constraints
                   </h2>
                 </div>
                 <button className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-all duration-200">
-                  <span className="material-symbols-outlined text-[20px]">
-                    edit
-                  </span>
+                  <MdEdit className="text-[20px]" />
                 </button>
               </div>
 

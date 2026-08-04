@@ -2,45 +2,35 @@
 
 import Link from "next/link";
 import { PublicHeader } from "../PublicHeader";
+import { MdArrowForward, MdCode, MdCheckBox } from "react-icons/md";
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-on-surface flex flex-col">
+    <div className="min-h-screen bg-background text-on-surface flex flex-col font-sans selection:bg-primary-container selection:text-on-primary-container">
       <PublicHeader />
-      <main className="pt-16 min-h-screen flex-1">
+      <main className="flex-1 pt-16">
         <div className="flex flex-col w-full">
           {/* Hero Section */}
-          <section className="min-h-[870px] flex flex-col justify-center max-w-container-max mx-auto px-margin-page w-full relative pt-12 pb-24">
-            <div className="flex flex-col gap-8 max-w-4xl relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-surface-container rounded-full w-fit border border-outline-variant/30">
+          <section className="relative px-8 py-24 md:py-36 flex flex-col items-center justify-center text-center overflow-hidden border-b border-outline-variant/30">
+            <div className="max-w-4xl flex flex-col items-center gap-8 relative z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-surface-container border border-outline-variant/30 rounded-sm font-mono-data text-mono-data text-on-surface-variant text-[12px]">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                <span className="font-mono-data text-mono-data text-on-surface-variant">
-                  System Status: Active
-                </span>
+                KEEPERHUB INTEGRATION ACTIVE
               </div>
               <h1 className="font-display-lg text-display-lg text-on-background tracking-tight">
-                <span className="text-on-surface-variant">AI decides.</span>
-                <br />
-                <span>Agents verify.</span>
-                <br />
-                <span className="text-primary relative inline-block">
-                  KeeperHub executes.
-                  <span className="absolute -bottom-2 left-0 w-full h-[2px] bg-primary/30"></span>
-                </span>
+                AI-Powered Reliability Layer for Autonomous Multi-Agent Operations
               </h1>
-              <p className="font-headline-md text-headline-md text-on-surface-variant max-w-2xl leading-snug">
-                A multi-agent reliability layer for autonomous onchain operations.
+              <p className="font-body-base text-body-base text-on-surface-variant max-w-2xl">
+                Prevent rogue agent transactions with 3-agent consensus, deterministic policy enforcement, and live execution audit trails.
               </p>
-              <div className="flex flex-wrap items-center gap-4 mt-4">
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
                 <Link
                   href="/dashboard"
                   className="bg-primary hover:bg-primary-container text-on-primary px-8 py-4 font-label-caps text-label-caps rounded-sm transition-colors relative group overflow-hidden inline-flex items-center gap-2"
                 >
                   <span className="relative z-10 flex items-center gap-2">
                     LAUNCH DASHBOARD
-                    <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">
-                      arrow_forward
-                    </span>
+                    <MdArrowForward className="text-[16px] group-hover:translate-x-1 transition-transform" />
                   </span>
                 </Link>
                 <a
@@ -49,7 +39,7 @@ export function LandingPage() {
                   rel="noreferrer"
                   className="px-8 py-4 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-caps text-label-caps rounded-sm transition-colors flex items-center gap-2 border border-outline-variant/30"
                 >
-                  <span className="material-symbols-outlined text-[16px]">code</span>
+                  <MdCode className="text-[16px]" />
                   GITHUB
                 </a>
               </div>
@@ -252,21 +242,15 @@ export function LandingPage() {
                   </p>
                   <ul className="flex flex-col gap-4 font-mono-data text-mono-data text-on-surface">
                     <li className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-[16px]">
-                        check_box
-                      </span>
+                      <MdCheckBox className="text-primary text-[16px]" />
                       Dry-run simulation on local forks
                     </li>
                     <li className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-[16px]">
-                        check_box
-                      </span>
+                      <MdCheckBox className="text-primary text-[16px]" />
                       MEV protection layer
                     </li>
                     <li className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-[16px]">
-                        check_box
-                      </span>
+                      <MdCheckBox className="text-primary text-[16px]" />
                       Automated gas bumping strategies
                     </li>
                   </ul>
