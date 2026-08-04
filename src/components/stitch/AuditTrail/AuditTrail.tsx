@@ -9,7 +9,7 @@ export function AuditTrail() {
       <Sidebar />
       <div className="pl-64 flex-1 flex flex-col min-h-screen">
         <ConsoleHeader />
-        <main className="pt-16 p-8 min-h-screen flex-1">
+        <main className="pt-24 p-8 min-h-screen flex-1">
           <div className="flex flex-col w-full max-w-container-max mx-auto px-8 gap-y-12 pb-16">
             {/* Title section */}
             <div className="flex flex-col relative w-full pt-8">

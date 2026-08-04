@@ -10,7 +10,7 @@ export function DashboardConsole() {
       <Sidebar />
       <div className="pl-64 flex-1 flex flex-col min-h-screen">
         <ConsoleHeader />
-        <main className="pt-16 p-8 min-h-screen flex-1">
+        <main className="pt-24 p-8 min-h-screen flex-1">
           <div className="flex flex-col w-full gap-8">
             {/* Metric Cards Grid */}
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">

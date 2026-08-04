@@ -8,15 +8,18 @@ export function Sidebar() {
 
   const navItems = [
     { name: "DASHBOARD", path: "/dashboard", icon: "dashboard" },
-    { name: "AGENTS", path: "/system-orientation", icon: "smart_toy" },
-    { name: "POLICIES", path: "/system-orientation", icon: "policy" },
+    { name: "AGENTS", path: "/agents", icon: "smart_toy" },
+    { name: "POLICIES", path: "/policies", icon: "policy" },
     { name: "EXECUTIONS", path: "/audit-trail", icon: "terminal" },
   ];
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 border-r border-outline-variant/30 bg-surface-container-lowest z-50 flex flex-col">
       <div className="p-6 border-b border-outline-variant/30 flex items-center gap-3">
-        <Link href="/" className="font-headline-md text-headline-md text-primary tracking-tight hover:opacity-90 transition-opacity">
+        <Link
+          href="/"
+          className="font-headline-md text-headline-md text-primary tracking-tight hover:opacity-90 transition-opacity"
+        >
           AgentOps
         </Link>
       </div>
