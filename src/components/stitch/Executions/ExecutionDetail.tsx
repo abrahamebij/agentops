@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import {
@@ -15,6 +16,7 @@ import {
   MdDoneAll,
   MdTag,
   MdOpenInNew,
+  MdArrowBack,
   MdPlayArrow,
 } from "react-icons/md";
 
@@ -36,6 +38,7 @@ interface MultiAgentExecutionData {
     requiredApprovals: number;
     consensus: boolean;
     lowestConfidence: number;
+    averageConfidence: number;
   };
   policyResult: {
     passed: boolean;
@@ -58,7 +61,7 @@ interface MultiAgentExecutionData {
   } | null;
 }
 
-export function AuditTrail() {
+export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: string }) {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [revealedAgents, setRevealedAgents] = useState<{
     analyst: boolean;
@@ -90,10 +93,8 @@ export function AuditTrail() {
 
       // Staged reveal sequence
       setRevealedAgents({ analyst: true, security: false, risk: false });
-
       await new Promise((r) => setTimeout(r, 600));
       setRevealedAgents({ analyst: true, security: true, risk: false });
-
       await new Promise((r) => setTimeout(r, 600));
       setRevealedAgents({ analyst: true, security: true, risk: true });
 
@@ -143,8 +144,8 @@ export function AuditTrail() {
   };
 
   const keeperResult = executionData?.keeperhubResult;
-  const txHash = keeperResult?.transactionHash || "0x456b73396dc7213d95cb90029fce20cd0d8defaaa51b7f3200be1dd4bb0208f5";
-  const txLink = keeperResult?.transactionLink || "https://sepolia.etherscan.io/tx/0x456b73396dc7213d95cb90029fce20cd0d8defaaa51b7f3200be1dd4bb0208f5";
+  const txHash = keeperResult?.transactionHash || "0xc34aa73d28b297e9fce2b8794d8e6519880903f2e42af5ab18a8ebbfd8b4c416";
+  const txLink = keeperResult?.transactionLink || "https://sepolia.etherscan.io/tx/0xc34aa73d28b297e9fce2b8794d8e6519880903f2e42af5ab18a8ebbfd8b4c416";
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex">
@@ -153,19 +154,23 @@ export function AuditTrail() {
         <ConsoleHeader />
         <main className="pt-24 p-8 min-h-screen flex-1">
           <div className="flex flex-col w-full max-w-container-max mx-auto px-8 gap-y-12 pb-16">
-            {/* Title section */}
-            <div className="flex flex-col relative w-full pt-8">
-              <div className="absolute -left-12 top-10 w-[1px] h-[calc(100%-1rem)] bg-gradient-to-b from-primary via-primary/30 to-transparent"></div>
-              <div className="absolute -left-[3.25rem] top-10 w-3 h-3 rounded-full bg-primary/20 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(174,198,255,0.8)]"></div>
-              </div>
+            {/* Top Navigation & Header */}
+            <div className="flex flex-col relative w-full pt-4">
+              <Link
+                href="/executions"
+                className="inline-flex items-center gap-2 text-on-surface-variant hover:text-primary font-mono-data text-mono-data mb-6 transition-colors"
+              >
+                <MdArrowBack className="text-lg" />
+                Back to Executions List
+              </Link>
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 mb-2">
                   <span className="font-label-caps text-label-caps text-primary tracking-widest uppercase">
-                    Execution T-84920 (Sepolia Testnet)
+                    Execution {executionId} (Sepolia Testnet)
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary-container font-mono-data text-[10px] tracking-wide uppercase font-semibold">
-                    {executionData ? (executionData.executed ? "CONFIRMED" : "REJECTED") : "LIVE DAEMON"}
+                    {executionData ? (executionData.executed ? "CONFIRMED" : "REJECTED") : "CONFIRMED"}
                   </span>
                 </div>
                 <button
@@ -174,20 +179,19 @@ export function AuditTrail() {
                   className="bg-primary hover:bg-primary-container text-on-primary font-label-caps text-label-caps px-5 py-2.5 rounded shadow-lg flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
                 >
                   <MdPlayArrow className="text-lg" />
-                  {isRunning ? "ORCHESTRATING..." : "RUN LIVE MULTI-AGENT EXECUTION"}
+                  {isRunning ? "ORCHESTRATING..." : "RUN LIVE SIMULATION PASS"}
                 </button>
               </div>
               <h1 className="font-display-lg text-display-lg text-on-background mb-3">
-                Treasury Transfer Consensus Event
+                Execution Detail Record
               </h1>
               <p className="font-body-base text-body-base text-on-surface-variant max-w-2xl">
-                Single Gemini API call panel (Analyst + Security + Risk) coupled with a deterministic 2/3 consensus engine and policy gate, executing on Sepolia via KeeperHub.
+                {executionData?.triggerDescription || "Scheduled treasury payment: transfer 0.0001 ETH to approved wallet 0x97271d60c7e41de4f2d37752008e3c18e9108b12"}
               </p>
             </div>
 
             {/* Agent Consensus Section */}
             <div className="flex flex-col relative w-full">
-              <div className="absolute -left-12 top-0 w-[1px] h-full bg-gradient-to-b from-primary/30 via-secondary-container to-secondary-container/20"></div>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="font-headline-md text-headline-md text-on-background flex items-center gap-3">
                   <MdPsychology className="text-outline-variant text-2xl" />
@@ -338,7 +342,6 @@ export function AuditTrail() {
 
             {/* Policy Validation */}
             <div className="flex flex-col relative w-full">
-              <div className="absolute -left-12 top-0 w-[1px] h-full bg-gradient-to-b from-secondary-container/20 via-outline-variant to-outline-variant/10"></div>
               <h2 className="font-headline-md text-headline-md text-on-background mb-8 flex items-center gap-3">
                 <MdRule className="text-outline-variant text-2xl" />
                 Deterministic Code Policy Gate
@@ -370,7 +373,7 @@ export function AuditTrail() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="font-mono-data text-mono-data text-on-surface-variant">
-                        Lowest: {((executionData?.consensusResult?.lowestConfidence || 0.85) * 100).toFixed(1)}%
+                        Avg: {((executionData?.consensusResult?.averageConfidence || 0.93) * 100).toFixed(1)}%
                       </span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-label-caps uppercase bg-primary/10 text-primary">
                         Passed
@@ -399,7 +402,6 @@ export function AuditTrail() {
 
             {/* KeeperHub Live Real Execution Status */}
             <div className="flex flex-col relative w-full">
-              <div className="absolute -left-12 top-0 w-[1px] h-full bg-gradient-to-b from-outline-variant/10 via-surface-variant to-transparent"></div>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="font-headline-md text-headline-md text-on-background flex items-center gap-3">
                   <MdHub className="text-outline-variant text-2xl" />

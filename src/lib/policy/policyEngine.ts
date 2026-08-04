@@ -1,9 +1,10 @@
 import { AgentDecision } from "../agent/analystAgent";
+import { ConsensusResult } from "../consensus/consensusEngine";
 
 export interface Policy {
   maxTransactionUsd: number;      // 50 for MVP
   minConfidence: number;           // 0.85 for MVP
-  requiredApprovals: number;       // 1 for single agent step
+  requiredApprovals: number;       // 2 out of 3 for multi-agent consensus
   allowedActions: string[];        // ["transfer"]
   allowedChainId: number;          // 11155111 (Sepolia)
 }
@@ -31,13 +32,13 @@ export interface PolicyResult {
 export const DEFAULT_MVP_POLICY: Policy = {
   maxTransactionUsd: 50,
   minConfidence: 0.85,
-  requiredApprovals: 1,
+  requiredApprovals: 2,
   allowedActions: ["transfer"],
   allowedChainId: 11155111,
 };
 
 export function checkPolicy(
-  agentDecision: AgentDecision,
+  decisionInput: AgentDecision | ConsensusResult,
   policy: Policy = DEFAULT_MVP_POLICY,
   txDetails: TxDetails
 ): PolicyResult {
@@ -45,8 +46,20 @@ export function checkPolicy(
   const amountEthNum = parseFloat(txDetails.amountEth) || 0;
   const txAmountUsd = amountEthNum * ethPrice;
 
-  const agentApproved = agentDecision.decision === "approve";
-  const confidenceThreshold = agentDecision.confidence >= policy.minConfidence;
+  let agentApproved = false;
+  let confidenceVal = 0;
+
+  if ("consensus" in decisionInput) {
+    // ConsensusResult Input: Uses average confidence across approving agents
+    agentApproved = decisionInput.consensus;
+    confidenceVal = decisionInput.averageConfidence;
+  } else {
+    // Single AgentDecision Input
+    agentApproved = decisionInput.decision === "approve";
+    confidenceVal = decisionInput.confidence;
+  }
+
+  const confidenceThreshold = confidenceVal >= policy.minConfidence;
   const amountWithinLimit = txAmountUsd <= policy.maxTransactionUsd;
   const chainAllowed = txDetails.chainId === policy.allowedChainId;
   const actionAllowed = policy.allowedActions.includes(txDetails.actionType);
@@ -60,11 +73,21 @@ export function checkPolicy(
   };
 
   const reasons: string[] = [];
-  if (!agentApproved) reasons.push("agent_decision_rejected");
-  if (!confidenceThreshold) reasons.push(`confidence_below_threshold_${agentDecision.confidence}_vs_${policy.minConfidence}`);
-  if (!amountWithinLimit) reasons.push(`amount_exceeds_usd_limit_$${txAmountUsd.toFixed(2)}_vs_$${policy.maxTransactionUsd}`);
-  if (!chainAllowed) reasons.push(`chain_id_not_allowed_${txDetails.chainId}_vs_${policy.allowedChainId}`);
-  if (!actionAllowed) reasons.push(`action_not_allowed_${txDetails.actionType}`);
+  if (!agentApproved) {
+    reasons.push("Agent consensus or verdict rejected the transaction.");
+  }
+  if (!confidenceThreshold) {
+    reasons.push(`Agent average confidence (${(confidenceVal * 100).toFixed(0)}%) is below the minimum required policy threshold (${(policy.minConfidence * 100).toFixed(0)}%).`);
+  }
+  if (!amountWithinLimit) {
+    reasons.push(`Transaction amount ($${txAmountUsd.toFixed(2)} USD) exceeds the maximum policy spending limit ($${policy.maxTransactionUsd.toFixed(2)} USD).`);
+  }
+  if (!chainAllowed) {
+    reasons.push(`Target chain ID ${txDetails.chainId} is not allowed by policy (allowed chain: ${policy.allowedChainId}).`);
+  }
+  if (!actionAllowed) {
+    reasons.push(`Action type "${txDetails.actionType}" is not permitted under active policy rules.`);
+  }
 
   const passed = agentApproved && confidenceThreshold && amountWithinLimit && chainAllowed && actionAllowed;
 

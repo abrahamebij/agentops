@@ -88,7 +88,7 @@ export function DashboardConsole() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Execution Card 1 */}
                 <Link
-                  href="/audit-trail"
+                  href="/executions/T-84920"
                   className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
@@ -123,7 +123,7 @@ export function DashboardConsole() {
 
                 {/* Execution Card 2 */}
                 <Link
-                  href="/audit-trail"
+                  href="/executions/T-84920"
                   className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
@@ -155,7 +155,7 @@ export function DashboardConsole() {
 
                 {/* Execution Card 3 */}
                 <Link
-                  href="/audit-trail"
+                  href="/executions/T-84920"
                   className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-error"></div>
@@ -187,7 +187,7 @@ export function DashboardConsole() {
 
                 {/* Execution Card 4 */}
                 <Link
-                  href="/audit-trail"
+                  href="/executions/T-84920"
                   className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
@@ -219,7 +219,7 @@ export function DashboardConsole() {
 
                 {/* Execution Card 5 */}
                 <Link
-                  href="/audit-trail"
+                  href="/executions/T-84920"
                   className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
                 >
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>

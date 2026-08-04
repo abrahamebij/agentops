@@ -4,7 +4,7 @@ import path from "path";
 export interface AgentDecision {
   decision: "approve" | "reject";
   confidence: number; // 0.0 - 1.0
-  reasons: string[];  // short_snake_case_tags
+  reasons: string[];  // full natural language string explanations
 }
 
 function loadEnvKeys() {
@@ -32,13 +32,13 @@ You MUST return ONLY a JSON object with this EXACT schema:
 {
   "decision": "approve" | "reject",
   "confidence": <number between 0.0 and 1.0>,
-  "reasons": ["short_snake_case_tag_1", "short_snake_case_tag_2"]
+  "reasons": ["Clear natural language explanation 1", "Clear natural language explanation 2"]
 }
 
 STRICT RULES:
 1. "decision" MUST be exactly "approve" or "reject". No other string values allowed.
 2. "confidence" MUST be a floating point number between 0.0 and 1.0.
-3. "reasons" MUST be an array of short, lower_snake_case string tags (e.g. "payment_matches_schedule", "recipient_is_approved", "suspicious_recipient", "unauthorized_amount").
+3. "reasons" MUST be an array of clear, human-readable natural language string explanations (e.g. "Payment matches expected scheduled distribution", "Recipient address is pre-approved"). DO NOT use snake_case tags.
 4. Output ONLY valid raw JSON. No markdown code blocks, no trailing commas, no extra commentary.`;
 
 export async function runAnalystAgent(triggerDescription: string): Promise<AgentDecision> {
@@ -48,13 +48,12 @@ export async function runAnalystAgent(triggerDescription: string): Promise<Agent
   // 1. Try Gemini API if key is present
   if (geminiKey) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: [{ parts: [{ text: `Analyze trigger: "${triggerDescription}"` }] }],
+          contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\nAnalyze trigger: "${triggerDescription}"` }] }],
           generationConfig: {
             responseMimeType: "application/json",
             temperature: 0.1,
@@ -108,7 +107,7 @@ export async function runAnalystAgent(triggerDescription: string): Promise<Agent
     }
   }
 
-  // 3. Fallback Deterministic Analyst Engine (when no external LLM API key is set)
+  // 3. Fallback Deterministic Analyst Engine
   return fallbackAnalystEngine(triggerDescription);
 }
 
@@ -125,9 +124,9 @@ function parseAndValidateDecision(rawText: string): AgentDecision | null {
       Array.isArray(obj.reasons)
     ) {
       return {
-        decision: obj.decision,
+        decision: obj.decision as "approve" | "reject",
         confidence: Number(obj.confidence.toFixed(2)),
-        reasons: obj.reasons.map((r: unknown) => String(r).toLowerCase().replace(/\s+/g, "_")),
+        reasons: obj.reasons.map((r: unknown) => String(r).trim()),
       };
     }
   } catch {
@@ -139,7 +138,6 @@ function parseAndValidateDecision(rawText: string): AgentDecision | null {
 function fallbackAnalystEngine(triggerDescription: string): AgentDecision {
   const text = triggerDescription.toLowerCase();
 
-  // If trigger explicitly mentions rejection/suspicious/unauthorized
   if (
     text.includes("suspicious") ||
     text.includes("unauthorized") ||
@@ -151,14 +149,19 @@ function fallbackAnalystEngine(triggerDescription: string): AgentDecision {
     return {
       decision: "reject",
       confidence: 0.95,
-      reasons: ["suspicious_trigger_pattern", "unauthorized_recipient_risk"],
+      reasons: [
+        "Transaction pattern matches flagged suspicious activity.",
+        "Recipient address is unauthorized and poses severe risk.",
+      ],
     };
   }
 
-  // Standard approval path
   return {
     decision: "approve",
     confidence: 0.94,
-    reasons: ["payment_matches_schedule", "recipient_is_approved"],
+    reasons: [
+      "Payment distribution schedule matches expected recurring schedule.",
+      "Target recipient address is registered in approved wallet registry.",
+    ],
   };
 }
