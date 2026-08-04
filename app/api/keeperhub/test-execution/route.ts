@@ -3,6 +3,13 @@ import crypto from "crypto";
 
 const BASE_URL = "https://app.keeperhub.com";
 
+interface KeeperChain {
+  chainId: number;
+  isEnabled: boolean;
+  isTestnet: boolean;
+  [key: string]: unknown;
+}
+
 export async function GET() {
   const apiKey = process.env.KEEPERHUB_API_KEY;
   if (!apiKey) {
@@ -19,7 +26,7 @@ export async function GET() {
     // 1. Confirm Chain
     const chainsRes = await fetch(`${BASE_URL}/api/chains`, { headers });
     const chains = await chainsRes.json();
-    const sepolia = chains.find((c: any) => c.chainId === 11155111);
+    const sepolia = chains.find((c: KeeperChain) => c.chainId === 11155111);
 
     if (!sepolia || !sepolia.isEnabled || !sepolia.isTestnet) {
       return NextResponse.json(
@@ -103,7 +110,8 @@ export async function GET() {
       status: statusData.status,
       idempotencyReplayResult: replayData,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || err }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

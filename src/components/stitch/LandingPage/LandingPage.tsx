@@ -245,7 +245,7 @@ export function LandingPage() {
                     Deterministic execution via robust simulation.
                   </h2>
                   <p className="font-body-base text-body-base text-on-surface-variant mb-8 max-w-md">
-                    AgentOps leverages KeeperHub's infrastructure for shadow-fork
+                    AgentOps leverages KeeperHub&apos;s infrastructure for shadow-fork
                     simulation, gas optimization, and guaranteed onchain
                     execution. Every agent decision is stress-tested before a
                     single wei is spent.

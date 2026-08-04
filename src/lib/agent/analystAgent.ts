@@ -127,7 +127,7 @@ function parseAndValidateDecision(rawText: string): AgentDecision | null {
       return {
         decision: obj.decision,
         confidence: Number(obj.confidence.toFixed(2)),
-        reasons: obj.reasons.map((r: any) => String(r).toLowerCase().replace(/\s+/g, "_")),
+        reasons: obj.reasons.map((r: unknown) => String(r).toLowerCase().replace(/\s+/g, "_")),
       };
     }
   } catch {
