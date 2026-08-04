@@ -18,7 +18,7 @@ export function Sidebar() {
     { name: "DASHBOARD", path: "/dashboard", Icon: MdDashboard },
     { name: "AGENTS", path: "/agents", Icon: MdSmartToy },
     { name: "POLICIES", path: "/policies", Icon: MdPolicy },
-    { name: "EXECUTIONS", path: "/audit-trail", Icon: MdTerminal },
+    { name: "EXECUTIONS", path: "/executions", Icon: MdTerminal },
   ];
 
   return (
@@ -33,7 +33,9 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.path;
+          const isActive =
+            pathname === item.path ||
+            (item.path !== "/" && pathname.startsWith(item.path));
           const Icon = item.Icon;
           return (
             <Link
