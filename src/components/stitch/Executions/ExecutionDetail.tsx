@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
@@ -71,6 +71,40 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
   const [executionData, setExecutionData] = useState<MultiAgentExecutionData | null>(null);
   const [executorStep, setExecutorStep] = useState<"idle" | "simulating" | "broadcasting" | "confirmed" | "failed">("idle");
 
+  useEffect(() => {
+    async function loadRecord() {
+      try {
+        const res = await fetch(`/api/keeperhub/executions/${executionId}`);
+        const data = await res.json();
+        if (data.execution) {
+          const rec = data.execution;
+          setExecutionData({
+            triggerDescription: rec.triggerDescription,
+            txDetails: {
+              chainId: 11155111,
+              recipientAddress: rec.recipientAddress,
+              amountEth: rec.amountEth,
+              actionType: "transfer",
+            },
+            panelResult: rec.panelResult,
+            consensusResult: rec.consensusResult,
+            policyResult: rec.policyResult,
+            executed: rec.executed,
+            keeperhubResult: rec.keeperhubResult,
+          });
+          if (rec.executed) {
+            setExecutorStep("confirmed");
+          } else {
+            setExecutorStep("failed");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load execution detail:", err);
+      }
+    }
+    loadRecord();
+  }, [executionId]);
+
   const triggerLiveExecution = async () => {
     setIsRunning(true);
     setRevealedAgents({ analyst: false, security: false, risk: false });
@@ -116,36 +150,13 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
     }
   };
 
-  const analyst = executionData?.panelResult?.analyst || {
-    decision: "approve",
-    confidence: 0.94,
-    reasons: [
-      "Payment distribution schedule matches expected recurring distribution.",
-      "Recipient address 0x97271d60c7e41de4f2d37752008e3c18e9108b12 is pre-approved.",
-    ],
-  };
-
-  const security = executionData?.panelResult?.security || {
-    decision: "approve",
-    confidence: 0.91,
-    reasons: [
-      "Recipient address verified as safe with zero exploit vector history.",
-      "Transaction parameters remain strictly within policy safety bounds.",
-    ],
-  };
-
-  const risk = executionData?.panelResult?.risk || {
-    decision: "approve",
-    confidence: 0.97,
-    reasons: [
-      "Transaction value of 0.0001 ETH (~$0.30 USD) is well below max threshold ($50.00 USD).",
-      "Overall treasury financial exposure remains low.",
-    ],
-  };
+  const analyst = executionData?.panelResult?.analyst || null;
+  const security = executionData?.panelResult?.security || null;
+  const risk = executionData?.panelResult?.risk || null;
 
   const keeperResult = executionData?.keeperhubResult;
-  const txHash = keeperResult?.transactionHash || "0xc34aa73d28b297e9fce2b8794d8e6519880903f2e42af5ab18a8ebbfd8b4c416";
-  const txLink = keeperResult?.transactionLink || "https://sepolia.etherscan.io/tx/0xc34aa73d28b297e9fce2b8794d8e6519880903f2e42af5ab18a8ebbfd8b4c416";
+  const txHash = keeperResult?.transactionHash || "";
+  const txLink = keeperResult?.transactionLink || "";
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex">
@@ -227,11 +238,11 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className={`font-mono-data text-headline-md ${analyst.decision === "approve" ? "text-primary" : "text-error"}`}>
-                        {(analyst.confidence * 100).toFixed(1)}%
+                      <span className={`font-mono-data text-headline-md ${analyst?.decision === "approve" ? "text-primary" : "text-error"}`}>
+                        {((analyst?.confidence || 0) * 100).toFixed(1)}%
                       </span>
                       <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
-                        {analyst.decision.toUpperCase()}
+                        {analyst?.decision?.toUpperCase() || "PENDING"}
                       </span>
                     </div>
                   </div>
@@ -240,7 +251,7 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                       Agent Reasons &amp; Verdict:
                     </span>
                     <ul className="flex flex-col gap-1.5 font-mono-data text-[12px] text-on-surface">
-                      {analyst.reasons.map((r, i) => (
+                      {(analyst?.reasons || ["Awaiting execution analysis..."]).map((r, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <span className="text-primary font-bold">&gt;</span>
                           <span>{r}</span>
@@ -271,11 +282,11 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className={`font-mono-data text-headline-md ${security.decision === "approve" ? "text-primary" : "text-error"}`}>
-                        {(security.confidence * 100).toFixed(1)}%
+                      <span className={`font-mono-data text-headline-md ${security?.decision === "approve" ? "text-primary" : "text-error"}`}>
+                        {((security?.confidence || 0) * 100).toFixed(1)}%
                       </span>
                       <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
-                        {security.decision.toUpperCase()}
+                        {security?.decision?.toUpperCase() || "PENDING"}
                       </span>
                     </div>
                   </div>
@@ -284,7 +295,7 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                       Agent Reasons &amp; Verdict:
                     </span>
                     <ul className="flex flex-col gap-1.5 font-mono-data text-[12px] text-on-surface">
-                      {security.reasons.map((r, i) => (
+                      {(security?.reasons || ["Awaiting execution analysis..."]).map((r, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <span className="text-primary font-bold">&gt;</span>
                           <span>{r}</span>
@@ -315,11 +326,11 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className={`font-mono-data text-headline-md ${risk.decision === "approve" ? "text-primary" : "text-error"}`}>
-                        {(risk.confidence * 100).toFixed(1)}%
+                      <span className={`font-mono-data text-headline-md ${risk?.decision === "approve" ? "text-primary" : "text-error"}`}>
+                        {((risk?.confidence || 0) * 100).toFixed(1)}%
                       </span>
                       <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
-                        {risk.decision.toUpperCase()}
+                        {risk?.decision?.toUpperCase() || "PENDING"}
                       </span>
                     </div>
                   </div>
@@ -328,7 +339,7 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                       Agent Reasons &amp; Verdict:
                     </span>
                     <ul className="flex flex-col gap-1.5 font-mono-data text-[12px] text-on-surface">
-                      {risk.reasons.map((r, i) => (
+                      {(risk?.reasons || ["Awaiting execution analysis..."]).map((r, i) => (
                         <li key={i} className="flex items-start gap-2">
                           <span className="text-primary font-bold">&gt;</span>
                           <span>{r}</span>

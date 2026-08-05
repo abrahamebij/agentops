@@ -1,9 +1,69 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
-import { MdFilterList, MdCheckCircle, MdWarning, MdError } from "react-icons/md";
+import { MdFilterList, MdCheckCircle, MdError, MdTag } from "react-icons/md";
+
+interface ExecutionRecord {
+  id: string;
+  triggerDescription: string;
+  status: "confirmed" | "rejected" | "running";
+  decision: "EXECUTE" | "REJECT";
+  amountEth: string;
+  amountUsd: string;
+  timestamp: string;
+  txHash?: string;
+  txLink?: string;
+}
 
 export function DashboardConsole() {
+  const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [successRate, setSuccessRate] = useState<string>("100.0%");
+
+  useEffect(() => {
+    async function loadExecutions() {
+      try {
+        const res = await fetch("/api/keeperhub/multi-agent-execution");
+        const data = await res.json();
+        if (data.executions && Array.isArray(data.executions)) {
+          const records: ExecutionRecord[] = data.executions.map((e: {
+            id: string;
+            triggerDescription: string;
+            status: "confirmed" | "rejected" | "running";
+            decision: "EXECUTE" | "REJECT";
+            amountEth: string;
+            amountUsd: string;
+            timestamp: string;
+            keeperhubResult?: { transactionHash?: string; transactionLink?: string };
+          }) => ({
+            id: e.id,
+            triggerDescription: e.triggerDescription,
+            status: e.status,
+            decision: e.decision,
+            amountEth: e.amountEth,
+            amountUsd: e.amountUsd,
+            timestamp: e.timestamp,
+            txHash: e.keeperhubResult?.transactionHash,
+            txLink: e.keeperhubResult?.transactionLink,
+          }));
+
+          setExecutions(records);
+          setTotalCount(records.length);
+
+          const confirmed = records.filter((r) => r.status === "confirmed").length;
+          const rate = records.length > 0 ? ((confirmed / records.length) * 100).toFixed(1) : "100.0";
+          setSuccessRate(`${rate}%`);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard executions:", err);
+      }
+    }
+    loadExecutions();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-on-surface flex">
       <Sidebar />
@@ -34,16 +94,16 @@ export function DashboardConsole() {
                   Active Policies
                 </span>
                 <span className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
-                  12
+                  5
                 </span>
               </div>
 
               <div className="bg-surface-container rounded-lg p-5 flex flex-col gap-2 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 border border-outline-variant/30">
                 <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
-                  Execution Count
+                  Total Executions
                 </span>
                 <span className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
-                  1,240
+                  {totalCount}
                 </span>
               </div>
 
@@ -53,17 +113,17 @@ export function DashboardConsole() {
                 </span>
                 <div className="flex items-baseline gap-2">
                   <span className="font-display-lg-mobile text-display-lg-mobile text-primary">
-                    99.8%
+                    {successRate}
                   </span>
                 </div>
               </div>
 
               <div className="bg-surface-container rounded-lg p-5 flex flex-col gap-2 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 border border-outline-variant/30">
                 <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
-                  Pending Actions
+                  Active Agents
                 </span>
-                <span className="font-display-lg-mobile text-display-lg-mobile text-on-surface-variant/50">
-                  0
+                <span className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
+                  3
                 </span>
               </div>
             </section>
@@ -76,174 +136,80 @@ export function DashboardConsole() {
                     Recent Executions
                   </h2>
                   <div className="px-2 py-1 rounded bg-surface-container-high font-mono-data text-mono-data text-on-surface-variant text-[10px] border border-outline-variant/30">
-                    REAL-TIME TAIL
+                    REAL-TIME LIVE LOG
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-surface-container hover:bg-surface-container-high transition-colors rounded text-primary font-label-caps text-label-caps border border-outline-variant/30">
+                <Link
+                  href="/executions"
+                  className="flex items-center gap-2 px-4 py-2 bg-surface-container hover:bg-surface-container-high transition-colors rounded text-primary font-label-caps text-label-caps border border-outline-variant/30"
+                >
                   <MdFilterList className="text-[18px]" />
-                  FILTER VIEW
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Execution Card 1 */}
-                <Link
-                  href="/executions/T-84920"
-                  className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <MdCheckCircle className="text-primary text-[20px]" />
-                      <span className="font-mono-data text-mono-data text-on-surface">
-                        0x7a9f...e142
-                      </span>
-                    </div>
-                    <span className="font-mono-data text-mono-data text-on-surface-variant text-[11px]">
-                      2s ago
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-label-caps text-label-caps text-on-surface-variant">
-                      TRIGGER: ORACLE_UPDATE
-                    </span>
-                    <p className="font-body-base text-body-base text-on-surface line-clamp-2">
-                      Arbitrage policy executed successfully. Rebalanced liquidity pool alpha-7 following price variance &gt; 0.5%.
-                    </p>
-                  </div>
-                  <div className="flex gap-2 mt-auto pt-4">
-                    <span className="px-2 py-1 bg-surface rounded text-[10px] font-mono-data text-mono-data text-on-surface-variant border border-outline-variant/30">
-                      GAS: 42 GWEI
-                    </span>
-                    <span className="px-2 py-1 bg-surface rounded text-[10px] font-mono-data text-mono-data text-on-surface-variant border border-outline-variant/30">
-                      LATENCY: 12ms
-                    </span>
-                  </div>
-                </Link>
-
-                {/* Execution Card 2 */}
-                <Link
-                  href="/executions/T-84920"
-                  className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <MdWarning className="text-tertiary text-[20px]" />
-                      <span className="font-mono-data text-mono-data text-on-surface">
-                        0xb21c...99fd
-                      </span>
-                    </div>
-                    <span className="font-mono-data text-mono-data text-on-surface-variant text-[11px]">
-                      14s ago
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-label-caps text-label-caps text-on-surface-variant">
-                      TRIGGER: TIMEOUT_RETRY
-                    </span>
-                    <p className="font-body-base text-body-base text-on-surface line-clamp-2">
-                      RPC node failure on primary endpoint. Fallback sequence initiated. Transaction broadcast delayed by 2 blocks.
-                    </p>
-                  </div>
-                  <div className="flex gap-2 mt-auto pt-4">
-                    <span className="px-2 py-1 bg-surface rounded text-[10px] font-mono-data text-mono-data text-tertiary border border-tertiary/30">
-                      RETRIES: 1/3
-                    </span>
-                  </div>
-                </Link>
-
-                {/* Execution Card 3 */}
-                <Link
-                  href="/executions/T-84920"
-                  className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-error"></div>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <MdError className="text-error text-[20px]" />
-                      <span className="font-mono-data text-mono-data text-on-surface">
-                        0x11f4...0a9b
-                      </span>
-                    </div>
-                    <span className="font-mono-data text-mono-data text-on-surface-variant text-[11px]">
-                      45s ago
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-label-caps text-label-caps text-on-surface-variant">
-                      TRIGGER: MANUAL_OVERRIDE
-                    </span>
-                    <p className="font-body-base text-body-base text-on-surface line-clamp-2">
-                      Execution reverted. Policy threshold violated: Slippage tolerance exceeded max configuration (1.5%).
-                    </p>
-                  </div>
-                  <div className="flex gap-2 mt-auto pt-4">
-                    <span className="px-2 py-1 bg-error-container rounded text-[10px] font-mono-data text-mono-data text-on-error-container">
-                      ERR_SLIPPAGE_EXCEEDED
-                    </span>
-                  </div>
-                </Link>
-
-                {/* Execution Card 4 */}
-                <Link
-                  href="/executions/T-84920"
-                  className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <MdCheckCircle className="text-primary text-[20px]" />
-                      <span className="font-mono-data text-mono-data text-on-surface">
-                        0x88de...3b21
-                      </span>
-                    </div>
-                    <span className="font-mono-data text-mono-data text-on-surface-variant text-[11px]">
-                      1m ago
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-label-caps text-label-caps text-on-surface-variant">
-                      TRIGGER: SCHEDULED_CRON
-                    </span>
-                    <p className="font-body-base text-body-base text-on-surface line-clamp-2">
-                      Daily yield harvest completed. Funds routed to cold storage multi-sig via cross-chain bridge.
-                    </p>
-                  </div>
-                  <div className="flex gap-2 mt-auto pt-4">
-                    <span className="px-2 py-1 bg-surface rounded text-[10px] font-mono-data text-mono-data text-on-surface-variant border border-outline-variant/30">
-                      GAS: 28 GWEI
-                    </span>
-                  </div>
-                </Link>
-
-                {/* Execution Card 5 */}
-                <Link
-                  href="/executions/T-84920"
-                  className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
-                >
-                  <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <MdCheckCircle className="text-primary text-[20px]" />
-                      <span className="font-mono-data text-mono-data text-on-surface">
-                        0x4c2a...f71e
-                      </span>
-                    </div>
-                    <span className="font-mono-data text-mono-data text-on-surface-variant text-[11px]">
-                      3m ago
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-label-caps text-label-caps text-on-surface-variant">
-                      TRIGGER: CONTRACT_EVENT
-                    </span>
-                    <p className="font-body-base text-body-base text-on-surface line-clamp-2">
-                      New validator node registered. Monitoring agent updated active set and adjusted staking allocations.
-                    </p>
-                  </div>
+                  VIEW ALL EXECUTIONS
                 </Link>
               </div>
+
+              {executions.length === 0 ? (
+                <div className="bg-surface-container rounded-xl p-12 text-center flex flex-col items-center justify-center border border-outline-variant/30 gap-3">
+                  <span className="font-mono-data text-mono-data text-on-surface">
+                    No execution records in database yet.
+                  </span>
+                  <Link
+                    href="/executions"
+                    className="text-primary font-label-caps text-xs hover:underline"
+                  >
+                    Go to Executions page to trigger your first live multi-agent execution &rarr;
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {executions.slice(0, 6).map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/executions/${item.id}`}
+                      className="bg-surface-container flex flex-col rounded-lg p-5 gap-4 group hover:bg-surface-container-high transition-colors cursor-pointer relative overflow-hidden border border-outline-variant/30"
+                    >
+                      <div
+                        className={`absolute top-0 left-0 w-1 h-full ${
+                          item.status === "confirmed" ? "bg-primary" : "bg-error"
+                        }`}
+                      ></div>
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          {item.status === "confirmed" ? (
+                            <MdCheckCircle className="text-primary text-[20px]" />
+                          ) : (
+                            <MdError className="text-error text-[20px]" />
+                          )}
+                          <span className="font-mono-data text-mono-data text-on-surface font-bold">
+                            {item.id}
+                          </span>
+                        </div>
+                        <span className="font-mono-data text-mono-data text-on-surface-variant text-[11px]">
+                          {item.timestamp}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">
+                          STATUS: {item.decision}
+                        </span>
+                        <p className="font-body-base text-body-base text-on-surface line-clamp-2">
+                          {item.triggerDescription}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 mt-auto pt-4 items-center justify-between">
+                        <span className="px-2 py-1 bg-surface rounded text-[10px] font-mono-data text-mono-data text-on-surface-variant border border-outline-variant/30">
+                          {item.amountEth} ({item.amountUsd})
+                        </span>
+                        {item.txHash && (
+                          <span className="px-2 py-1 bg-surface rounded text-[10px] font-mono-data text-mono-data text-primary border border-primary/30 flex items-center gap-1">
+                            <MdTag className="text-[12px]" /> TX CONFIRMED
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         </main>

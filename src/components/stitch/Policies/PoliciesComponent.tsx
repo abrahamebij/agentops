@@ -51,7 +51,7 @@ export function PoliciesComponent() {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono-data text-mono-data text-on-surface bg-surface-container-high px-3 py-1.5 rounded border border-outline-variant/30">
-                      500 ETH
+                      $50.00 USD (0.016 ETH)
                     </span>
                   </div>
                 </div>
@@ -102,7 +102,7 @@ export function PoliciesComponent() {
                       >
                         <path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z" />
                       </svg>
-                      Ethereum Sepolia
+                      Ethereum Sepolia (Chain ID: 11155111)
                     </span>
                   </div>
                 </div>
@@ -113,13 +113,16 @@ export function PoliciesComponent() {
                     Allowed Action Types
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-tertiary">
+                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
+                      #TRANSFER
+                    </span>
+                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
+                      #CONTRACT_CALL
+                    </span>
+                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
                       #YIELD_OPT
                     </span>
-                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-tertiary">
-                      #GAS_ESTIMATE
-                    </span>
-                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-tertiary">
+                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
                       #REBALANCE
                     </span>
                   </div>

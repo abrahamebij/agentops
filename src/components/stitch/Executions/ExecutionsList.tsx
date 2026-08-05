@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "../Sidebar";
@@ -29,76 +29,51 @@ export interface ExecutionRecord {
   txLink?: string;
 }
 
-export const INITIAL_EXECUTIONS: ExecutionRecord[] = [
-  {
-    id: "T-84920",
-    triggerDescription: "Scheduled treasury payment: transfer 0.0001 ETH to approved wallet 0x97271d60c7e41de4f2d37752008e3c18e9108b12",
-    status: "confirmed",
-    decision: "EXECUTE",
-    consensusScore: "3/3 Approved",
-    policyPassed: true,
-    amountEth: "0.0001 ETH",
-    amountUsd: "$0.30 USD",
-    timestamp: "2 mins ago",
-    txHash: "0xc34aa73d28b297e9fce2b8794d8e6519880903f2e42af5ab18a8ebbfd8b4c416",
-    txLink: "https://sepolia.etherscan.io/tx/0xc34aa73d28b297e9fce2b8794d8e6519880903f2e42af5ab18a8ebbfd8b4c416",
-  },
-  {
-    id: "T-84919",
-    triggerDescription: "Partial dissent test: transfer 0.0001 ETH with unverified contract ABI flag",
-    status: "confirmed",
-    decision: "EXECUTE",
-    consensusScore: "2/3 Approved",
-    policyPassed: true,
-    amountEth: "0.0001 ETH",
-    amountUsd: "$0.30 USD",
-    timestamp: "15 mins ago",
-    txHash: "0x856dd1084e5159eaeec74c99dafe6955c376a6f1a3697f9abea539fdb8de0191",
-    txLink: "https://sepolia.etherscan.io/tx/0x856dd1084e5159eaeec74c99dafe6955c376a6f1a3697f9abea539fdb8de0191",
-  },
-  {
-    id: "T-84918",
-    triggerDescription: "High-value transfer test: transfer 0.5 ETH exceeding $50 policy cap",
-    status: "rejected",
-    decision: "REJECT",
-    consensusScore: "3/3 Approved",
-    policyPassed: false,
-    amountEth: "0.5 ETH",
-    amountUsd: "$1,500.00 USD",
-    timestamp: "42 mins ago",
-  },
-  {
-    id: "T-84917",
-    triggerDescription: "Suspicious phishing transfer to unverified smart contract address 0xDEAD",
-    status: "rejected",
-    decision: "REJECT",
-    consensusScore: "0/3 Approved",
-    policyPassed: false,
-    amountEth: "0.0001 ETH",
-    amountUsd: "$0.30 USD",
-    timestamp: "1 hour ago",
-  },
-  {
-    id: "T-84916",
-    triggerDescription: "Initial setup transfer: transfer 0.0001 ETH to 0x97271d60c7e41de4f2d37752008e3c18e9108b12",
-    status: "confirmed",
-    decision: "EXECUTE",
-    consensusScore: "3/3 Approved",
-    policyPassed: true,
-    amountEth: "0.0001 ETH",
-    amountUsd: "$0.30 USD",
-    timestamp: "3 hours ago",
-    txHash: "0x288134137a1c31061eb11c0a38b8847b2039be4d4601aae0009c910d23248bff",
-    txLink: "https://sepolia.etherscan.io/tx/0x288134137a1c31061eb11c0a38b8847b2039be4d4601aae0009c910d23248bff",
-  },
-];
-
 export function ExecutionsList() {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | "confirmed" | "rejected">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [executions, setExecutions] = useState<ExecutionRecord[]>(INITIAL_EXECUTIONS);
+  const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
+
+  useEffect(() => {
+    async function loadExecutions() {
+      try {
+        const res = await fetch("/api/keeperhub/multi-agent-execution");
+        const data = await res.json();
+        if (data.executions && Array.isArray(data.executions)) {
+          const mapped: ExecutionRecord[] = data.executions.map((e: {
+            id: string;
+            triggerDescription: string;
+            status: "confirmed" | "rejected" | "running";
+            decision: "EXECUTE" | "REJECT";
+            consensusResult?: { approvalCount: number };
+            policyResult?: { passed: boolean };
+            amountEth: string;
+            amountUsd: string;
+            timestamp: string;
+            keeperhubResult?: { transactionHash?: string; transactionLink?: string };
+          }) => ({
+            id: e.id,
+            triggerDescription: e.triggerDescription,
+            status: e.status,
+            decision: e.decision,
+            consensusScore: `${e.consensusResult?.approvalCount || 3}/3 Approved`,
+            policyPassed: e.policyResult?.passed ?? true,
+            amountEth: e.amountEth,
+            amountUsd: e.amountUsd,
+            timestamp: e.timestamp,
+            txHash: e.keeperhubResult?.transactionHash,
+            txLink: e.keeperhubResult?.transactionLink,
+          }));
+          setExecutions(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to load stored executions:", err);
+      }
+    }
+    loadExecutions();
+  }, []);
 
   const filteredExecutions = executions.filter((item) => {
     const matchesFilter = filter === "all" || item.status === filter;
@@ -124,9 +99,9 @@ export function ExecutionsList() {
 
       const data = await res.json();
 
-      const newId = `T-${Math.floor(84921 + Math.random() * 100)}`;
+      const stored = data.storedRecord;
       const newRecord: ExecutionRecord = {
-        id: newId,
+        id: stored?.id || `T-${Math.floor(84921 + Math.random() * 100)}`,
         triggerDescription: data.triggerDescription || "Live Multi-Agent Treasury Transfer",
         status: data.executed ? "confirmed" : "rejected",
         decision: data.executed ? "EXECUTE" : "REJECT",
