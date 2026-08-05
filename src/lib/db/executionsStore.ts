@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { AgentPanelResult } from "../agent/agentPanel";
 import { AgentDecision } from "../agent/analystAgent";
 import { ConsensusResult } from "../consensus/consensusEngine";
@@ -35,8 +33,6 @@ export interface StoredExecutionRecord {
   keeperhubResult: KeeperHubExecutionResult | null;
 }
 
-const DATA_FILE = path.join(process.cwd(), ".agentops_executions.json");
-
 export async function getExecutions(userId?: string): Promise<StoredExecutionRecord[]> {
   const supabase = createServerClient();
 
@@ -52,15 +48,16 @@ export async function getExecutions(userId?: string): Promise<StoredExecutionRec
 
     const { data, error } = await query;
 
-    if (!error && data && data.length > 0) {
-      return data.map((row) => mapRowToRecord(row));
+    if (error) {
+      console.warn("Supabase fetch failed:", error.message);
+      return [];
     }
-  } catch (err) {
-    console.warn("Supabase fetch failed, checking local file fallback:", err);
-  }
 
-  // File fallback if DB table empty or offline
-  return getLocalExecutions();
+    return (data || []).map((row) => mapRowToRecord(row));
+  } catch (err) {
+    console.error("Unexpected error fetching executions:", err);
+    return [];
+  }
 }
 
 export async function getExecutionById(id: string, userId?: string): Promise<StoredExecutionRecord | null> {
@@ -78,27 +75,23 @@ export async function getExecutionById(id: string, userId?: string): Promise<Sto
 
     const { data, error } = await query.maybeSingle();
 
-    if (!error && data) {
-      return mapRowToRecord(data);
+    if (error) {
+      console.warn("Supabase fetch by ID failed:", error.message);
+      return null;
     }
-  } catch (err) {
-    console.warn("Supabase fetch by ID failed, checking local file fallback:", err);
-  }
 
-  const local = getLocalExecutions();
-  return local.find((r) => r.id === id) || null;
+    return data ? mapRowToRecord(data) : null;
+  } catch (err) {
+    console.error("Unexpected error fetching execution by ID:", err);
+    return null;
+  }
 }
 
 export async function addExecution(record: StoredExecutionRecord, userId?: string): Promise<void> {
-  // 1. Sync to local JSON fallback
-  const localRecords = getLocalExecutions();
-  saveLocalExecutions([record, ...localRecords]);
-
-  // 2. Persist to Supabase DB (executions + agent_verdicts)
   const supabase = createServerClient();
 
   try {
-    // Verify if userId exists in profiles to satisfy FK constraint
+    // Verify userId exists in profiles to satisfy FK constraint
     let validUserId: string | null = null;
     if (userId) {
       const { data: profile } = await supabase
@@ -168,28 +161,6 @@ export async function addExecution(record: StoredExecutionRecord, userId?: strin
     }
   } catch (err) {
     console.warn("Supabase execution insert error:", err);
-  }
-}
-
-// Local File Helper Functions
-function getLocalExecutions(): StoredExecutionRecord[] {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const content = fs.readFileSync(DATA_FILE, "utf-8");
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (err) {
-    console.error("Failed to read executions data file:", err);
-  }
-  return [];
-}
-
-function saveLocalExecutions(records: StoredExecutionRecord[]): void {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(records, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Failed to write executions data file:", err);
   }
 }
 
