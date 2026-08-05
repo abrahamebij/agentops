@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
-      .ilike("wallet_address", walletAddress)
+      .ilike("wallet_address", walletAddress.trim())
       .maybeSingle();
 
     if (profile) {
@@ -50,7 +50,31 @@ export async function POST(req: Request) {
     const supabase = createServerClient();
     let finalAvatarUrl = avatarUrl || "";
 
-    // 1. If base64 photo provided, upload to Supabase Storage 'avatars' bucket using Service Role Key
+    // 1. Check existing profile first to preserve name and avatar from DB
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("*")
+      .ilike("wallet_address", walletAddress.trim())
+      .maybeSingle();
+
+    let userId = existingProfile?.id || "";
+    let finalFullName = fullName;
+
+    if (existingProfile) {
+      // Preserve existing full_name if not explicitly provided or if "Operator" fallback was sent
+      if (!fullName || fullName === "Operator") {
+        finalFullName = existingProfile.full_name || "Operator";
+      }
+      if (!finalAvatarUrl && existingProfile.avatar_url) {
+        finalAvatarUrl = existingProfile.avatar_url;
+      }
+    }
+
+    if (!finalFullName) {
+      finalFullName = "Operator";
+    }
+
+    // 2. Upload base64 image if provided
     if (avatarBase64 && avatarBase64.startsWith("data:image")) {
       try {
         const matches = avatarBase64.match(/^data:(image\/(\w+));base64,(.+)$/);
@@ -59,7 +83,6 @@ export async function POST(req: Request) {
           const buffer = Buffer.from(matches[3], "base64");
           const fileName = `${walletAddress.slice(0, 8)}-${Date.now()}.${ext}`;
 
-          // Ensure bucket exists
           await supabase.storage.createBucket("avatars", { public: true }).catch(() => {});
 
           const { error: uploadErr } = await supabase.storage
@@ -85,40 +108,24 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. Check or create auth user using Admin API (bypasses email confirmation)
-    const dummyEmail = `${walletAddress.toLowerCase()}@agentops.io`;
-    const dummyPassword = `Pass_${walletAddress.slice(0, 10)}`;
+    // 3. Create auth user if missing
+    if (!userId) {
+      const dummyEmail = `${walletAddress.toLowerCase()}@agentops.io`;
+      const dummyPassword = `Pass_${walletAddress.slice(0, 10)}`;
 
-    let userId = "";
-
-    // Check existing profile or auth user
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id, avatar_url")
-      .ilike("wallet_address", walletAddress)
-      .maybeSingle();
-
-    if (existingProfile?.id) {
-      userId = existingProfile.id;
-      if (!finalAvatarUrl && existingProfile.avatar_url) {
-        finalAvatarUrl = existingProfile.avatar_url;
-      }
-    } else {
-      // Use Admin API to create pre-confirmed user
-      const { data: adminUser, error: adminErr } = await supabase.auth.admin.createUser({
+      const { data: adminUser } = await supabase.auth.admin.createUser({
         email: dummyEmail,
         password: dummyPassword,
         email_confirm: true,
         user_metadata: {
           wallet_address: walletAddress,
-          full_name: fullName || "Operator",
+          full_name: finalFullName,
         },
-      });
+      }).catch(() => ({ data: null }));
 
       if (adminUser?.user?.id) {
         userId = adminUser.user.id;
       } else {
-        console.warn("Admin createUser notice:", adminErr?.message);
         const { data: signInData } = await supabase.auth.signInWithPassword({
           email: dummyEmail,
           password: dummyPassword,
@@ -129,20 +136,18 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Upsert profile into public.profiles table
+    // 4. Upsert into public.profiles
     if (userId) {
       const { error: profileError } = await supabase.from("profiles").upsert({
         id: userId,
         wallet_address: walletAddress,
-        full_name: fullName || "Operator",
-        avatar_url: finalAvatarUrl || avatarUrl || "",
+        full_name: finalFullName,
+        avatar_url: finalAvatarUrl || "",
         updated_at: new Date().toISOString(),
       });
 
       if (profileError) {
         console.error("Profile store error:", profileError.message);
-      } else {
-        console.log(`✅ Profile created successfully in Supabase for user: ${userId}`);
       }
     }
 
@@ -150,8 +155,8 @@ export async function POST(req: Request) {
       success: true,
       userId: userId || walletAddress,
       walletAddress,
-      fullName: fullName || "Operator",
-      avatarUrl: finalAvatarUrl || avatarUrl || "",
+      fullName: finalFullName,
+      avatarUrl: finalAvatarUrl,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Profile setup failed";

@@ -11,24 +11,44 @@ export function PublicHeader() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [imageError, setImageError] = useState<boolean>(false);
   const [userSession, setUserSession] = useState<{
     fullName: string;
     avatarUrl: string;
+    walletAddress: string;
     isAuthenticated: boolean;
   } | null>(null);
 
-  useEffect(() => {
+  const loadLiveSession = async () => {
     const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.isAuthenticated) {
-          setUserSession(parsed);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.isAuthenticated) {
+        setUserSession(parsed);
+
+        // Fetch live from DB by wallet address
+        if (parsed.walletAddress) {
+          const res = await fetch(`/api/auth/profile?walletAddress=${parsed.walletAddress}`);
+          const data = await res.json();
+          if (data.exists && data.profile) {
+            setUserSession({
+              fullName: data.profile.fullName || parsed.fullName || "",
+              avatarUrl: data.profile.avatarUrl || parsed.avatarUrl || "",
+              walletAddress: data.profile.walletAddress || parsed.walletAddress,
+              isAuthenticated: true,
+            });
+          }
         }
-      } catch (err) {
-        console.error("Session parse error:", err);
       }
+    } catch (err) {
+      console.error("Session parse error:", err);
     }
+  };
+
+  useEffect(() => {
+    loadLiveSession();
 
     const handleOpenOnboarding = () => setIsModalOpen(true);
     window.addEventListener("open-onboarding", handleOpenOnboarding);
@@ -44,6 +64,10 @@ export function PublicHeader() {
       setIsModalOpen(true);
     }
   };
+
+  const displayName = userSession?.fullName || userSession?.walletAddress
+    ? (userSession?.fullName || `${userSession?.walletAddress?.slice(0, 6)}...${userSession?.walletAddress?.slice(-4)}`)
+    : "";
 
   return (
     <>
@@ -75,16 +99,21 @@ export function PublicHeader() {
                   href="/dashboard"
                   className="flex items-center gap-2.5 px-3.5 py-1.5 bg-surface-container hover:bg-surface-container-high rounded-full border border-outline-variant/30 text-on-surface transition-colors"
                 >
-                  <div className="w-6 h-6 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center border border-primary/40">
-                    {userSession.avatarUrl ? (
-                      <img src={userSession.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <div className="w-6 h-6 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center border border-primary/40 shrink-0">
+                    {userSession.avatarUrl && !imageError ? (
+                      <img
+                        src={userSession.avatarUrl}
+                        alt="Avatar"
+                        onError={() => setImageError(true)}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <span className="font-mono-data text-[10px] text-primary font-bold">
-                        {userSession.fullName.slice(0, 2).toUpperCase()}
+                        {displayName.slice(0, 2).toUpperCase()}
                       </span>
                     )}
                   </div>
-                  <span className="font-mono-data text-xs">{userSession.fullName}</span>
+                  <span className="font-mono-data text-xs">{displayName}</span>
                 </Link>
               </div>
             ) : (
@@ -126,17 +155,22 @@ export function PublicHeader() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="flex items-center gap-3 p-3 bg-surface-container-high rounded-xl border border-outline-variant/30 text-on-surface"
               >
-                <div className="w-8 h-8 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center border border-primary/40">
-                  {userSession.avatarUrl ? (
-                    <img src={userSession.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                <div className="w-8 h-8 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center border border-primary/40 shrink-0">
+                  {userSession.avatarUrl && !imageError ? (
+                    <img
+                      src={userSession.avatarUrl}
+                      alt="Avatar"
+                      onError={() => setImageError(true)}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <span className="font-mono-data text-xs text-primary font-bold">
-                      {userSession.fullName.slice(0, 2).toUpperCase()}
+                      {displayName.slice(0, 2).toUpperCase()}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono-data text-xs font-semibold">{userSession.fullName}</span>
+                  <span className="font-mono-data text-xs font-semibold">{displayName}</span>
                   <span className="font-label-caps text-[10px] text-primary">OPEN CONSOLE &rarr;</span>
                 </div>
               </Link>
@@ -156,8 +190,7 @@ export function PublicHeader() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
-          const raw = localStorage.getItem("agentops_user_session");
-          if (raw) setUserSession(JSON.parse(raw));
+          loadLiveSession();
         }}
       />
     </>
