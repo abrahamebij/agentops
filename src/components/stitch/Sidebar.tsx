@@ -55,11 +55,13 @@ export function Sidebar() {
       </nav>
       <div className="px-4 py-6 border-t border-outline-variant/30">
         <Link
-          href="/"
-          className={`flex items-center px-4 py-3 border-l-2 border-transparent text-on-surface-variant hover:bg-surface-container-low transition-all font-label-caps text-label-caps`}
+          href="/about"
+          className={`flex items-center px-4 py-3 border-l-2 ${
+            pathname === "/about" ? "bg-surface-container-high text-on-surface border-primary font-semibold" : "border-transparent text-on-surface-variant hover:bg-surface-container-low"
+          } transition-all font-label-caps text-label-caps`}
         >
           <MdSettings className="mr-3 text-lg" />
-          OVERVIEW
+          ABOUT
         </Link>
       </div>
     </aside>

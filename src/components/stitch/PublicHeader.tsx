@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { OnboardingModal } from "./Auth/OnboardingModal";
+import { MdMenu, MdClose } from "react-icons/md";
 
 export function PublicHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [userSession, setUserSession] = useState<{
     fullName: string;
     avatarUrl: string;
@@ -35,6 +37,7 @@ export function PublicHeader() {
 
   const handleLaunchClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    setIsMobileMenuOpen(false);
     if (userSession?.isAuthenticated) {
       router.push("/dashboard");
     } else {
@@ -47,18 +50,23 @@ export function PublicHeader() {
       <header className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30">
         <div className="h-16 max-w-container-max mx-auto px-margin-page flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="font-headline-md text-headline-md tracking-tight text-on-surface hover:opacity-90 transition-opacity">
+            <Link
+              href="/"
+              className="font-headline-md text-headline-md tracking-tight text-on-surface hover:opacity-90 transition-opacity"
+            >
               AgentOps
             </Link>
           </div>
-          <nav className="flex items-center gap-8">
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8">
             <Link
-              href="/"
+              href="/about"
               className={`font-label-caps text-label-caps transition-colors ${
-                pathname === "/" ? "text-on-surface font-semibold" : "text-on-surface-variant hover:text-on-surface"
+                pathname === "/about" ? "text-on-surface font-semibold" : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
-              OVERVIEW
+              ABOUT
             </Link>
 
             {userSession?.isAuthenticated ? (
@@ -88,7 +96,60 @@ export function PublicHeader() {
               </button>
             )}
           </nav>
+
+          {/* Mobile Hamburger Toggle Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle Navigation Menu"
+            className="flex md:hidden p-2 text-on-surface hover:bg-surface-container-high rounded-lg transition-colors"
+          >
+            {isMobileMenuOpen ? <MdClose className="text-2xl" /> : <MdMenu className="text-2xl" />}
+          </button>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-surface-container border-b border-outline-variant/40 px-6 py-6 flex flex-col gap-5 shadow-2xl animate-in slide-in-from-top duration-200">
+            <Link
+              href="/about"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`font-label-caps text-label-caps py-2 text-base transition-colors ${
+                pathname === "/about" ? "text-primary font-bold" : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              ABOUT
+            </Link>
+
+            {userSession?.isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-3 p-3 bg-surface-container-high rounded-xl border border-outline-variant/30 text-on-surface"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center border border-primary/40">
+                  {userSession.avatarUrl ? (
+                    <img src={userSession.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-mono-data text-xs text-primary font-bold">
+                      {userSession.fullName.slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-mono-data text-xs font-semibold">{userSession.fullName}</span>
+                  <span className="font-label-caps text-[10px] text-primary">OPEN CONSOLE &rarr;</span>
+                </div>
+              </Link>
+            ) : (
+              <button
+                onClick={handleLaunchClick}
+                className="w-full py-3.5 bg-primary text-on-primary rounded-xl font-label-caps text-label-caps font-semibold shadow-lg text-center"
+              >
+                LAUNCH CONSOLE
+              </button>
+            )}
+          </div>
+        )}
       </header>
 
       <OnboardingModal
