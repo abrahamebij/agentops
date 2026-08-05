@@ -1,6 +1,43 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/src/lib/supabase/server";
 
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const walletAddress = searchParams.get("walletAddress");
+
+    if (!walletAddress) {
+      return NextResponse.json({ error: "Wallet address parameter is required" }, { status: 400 });
+    }
+
+    const supabase = createServerClient();
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .ilike("wallet_address", walletAddress)
+      .maybeSingle();
+
+    if (profile) {
+      return NextResponse.json({
+        exists: true,
+        profile: {
+          userId: profile.id,
+          walletAddress: profile.wallet_address,
+          fullName: profile.full_name,
+          avatarUrl: profile.avatar_url || "",
+          role: profile.role || "Operator",
+        },
+      });
+    }
+
+    return NextResponse.json({ exists: false });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Profile check failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -57,12 +94,15 @@ export async function POST(req: Request) {
     // Check existing profile or auth user
     const { data: existingProfile } = await supabase
       .from("profiles")
-      .select("id")
-      .eq("wallet_address", walletAddress)
+      .select("id, avatar_url")
+      .ilike("wallet_address", walletAddress)
       .maybeSingle();
 
     if (existingProfile?.id) {
       userId = existingProfile.id;
+      if (!finalAvatarUrl && existingProfile.avatar_url) {
+        finalAvatarUrl = existingProfile.avatar_url;
+      }
     } else {
       // Use Admin API to create pre-confirmed user
       const { data: adminUser, error: adminErr } = await supabase.auth.admin.createUser({
@@ -79,7 +119,6 @@ export async function POST(req: Request) {
         userId = adminUser.user.id;
       } else {
         console.warn("Admin createUser notice:", adminErr?.message);
-        // Fallback: search auth user by email
         const { data: signInData } = await supabase.auth.signInWithPassword({
           email: dummyEmail,
           password: dummyPassword,
