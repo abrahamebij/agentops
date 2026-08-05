@@ -25,12 +25,12 @@ export async function getUserPolicy(userId?: string): Promise<Policy> {
       if (!error && data) {
         return {
           maxTransactionUsd: Number(data.max_tx_usd),
-          minConfidenceThreshold: Number(data.min_confidence),
+          minConfidence: Number(data.min_confidence),
           requiredApprovals: Number(data.required_approvals),
           allowedChainId: Number(data.allowed_chain_id),
-          allowedActionTypes: Array.isArray(data.allowed_actions)
+          allowedActions: Array.isArray(data.allowed_actions)
             ? data.allowed_actions
-            : DEFAULT_MVP_POLICY.allowedActionTypes,
+            : DEFAULT_MVP_POLICY.allowedActions,
         };
       }
 
@@ -38,10 +38,10 @@ export async function getUserPolicy(userId?: string): Promise<Policy> {
       const seedData = {
         user_id: userId,
         max_tx_usd: DEFAULT_MVP_POLICY.maxTransactionUsd,
-        min_confidence: DEFAULT_MVP_POLICY.minConfidenceThreshold,
+        min_confidence: DEFAULT_MVP_POLICY.minConfidence,
         required_approvals: DEFAULT_MVP_POLICY.requiredApprovals,
         allowed_chain_id: DEFAULT_MVP_POLICY.allowedChainId,
-        allowed_actions: DEFAULT_MVP_POLICY.allowedActionTypes,
+        allowed_actions: DEFAULT_MVP_POLICY.allowedActions,
         updated_at: new Date().toISOString(),
       };
 
@@ -54,12 +54,12 @@ export async function getUserPolicy(userId?: string): Promise<Policy> {
       if (inserted) {
         return {
           maxTransactionUsd: Number(inserted.max_tx_usd),
-          minConfidenceThreshold: Number(inserted.min_confidence),
+          minConfidence: Number(inserted.min_confidence),
           requiredApprovals: Number(inserted.required_approvals),
           allowedChainId: Number(inserted.allowed_chain_id),
-          allowedActionTypes: Array.isArray(inserted.allowed_actions)
+          allowedActions: Array.isArray(inserted.allowed_actions)
             ? inserted.allowed_actions
-            : DEFAULT_MVP_POLICY.allowedActionTypes,
+            : DEFAULT_MVP_POLICY.allowedActions,
         };
       }
     }

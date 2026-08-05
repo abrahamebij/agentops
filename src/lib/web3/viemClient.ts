@@ -1,4 +1,16 @@
 import { createWalletClient, custom, createPublicClient, http, formatEther } from "viem";
+
+// Augment the global Window type to include the EIP-1193 ethereum provider
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on?: (event: string, handler: (...args: unknown[]) => void) => void;
+      removeListener?: (event: string, handler: (...args: unknown[]) => void) => void;
+      isMetaMask?: boolean;
+    };
+  }
+}
 import { sepolia } from "viem/chains";
 
 export function getViemPublicClient() {

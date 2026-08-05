@@ -1,9 +1,21 @@
 import fs from "fs";
 import path from "path";
 import { AgentPanelResult } from "../agent/agentPanel";
+import { AgentDecision } from "../agent/analystAgent";
 import { ConsensusResult } from "../consensus/consensusEngine";
 import { PolicyResult } from "../policy/policyEngine";
-import { KeeperHubExecutionResult } from "../orchestrator/multiAgentOrchestrator";
+// KeeperHubExecutionResult is the shape of MultiAgentOrchestrationResult["keeperhubResult"]
+export interface KeeperHubExecutionResult {
+  simulationPassed: boolean;
+  idempotencyKey?: string;
+  executionId?: string;
+  transactionHash?: string;
+  transactionLink?: string;
+  gasUsedWei?: string;
+  status?: string;
+  replayVerified?: boolean;
+  error?: string;
+}
 import { createServerClient } from "../supabase/server";
 
 export interface StoredExecutionRecord {
@@ -245,8 +257,14 @@ function mapRowToRecord(row: {
       approvalCount: approvedCount,
       requiredApprovals: 2,
       consensus: approvedCount >= 2,
+      agentResults: {
+        analyst: analyst as AgentDecision,
+        security: security as AgentDecision,
+        risk: risk as AgentDecision,
+      },
       lowestConfidence,
       averageConfidence,
+      reasons: [],
     },
     policyResult: {
       passed: row.executed,
