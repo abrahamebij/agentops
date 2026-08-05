@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
-import { MdAccountBalanceWallet, MdCloudUpload, MdCheck, MdClose } from "react-icons/md";
-
+import { MdAccountBalanceWallet, MdCheck, MdClose, MdCameraAlt } from "react-icons/md";
 import { connectViemWallet } from "@/src/lib/web3/viemClient";
 
 interface OnboardingModalProps {
@@ -49,18 +48,26 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
       const file = e.target.files[0];
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
+      setErrorMsg(null);
     }
   };
 
   const completeOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setErrorMsg(null);
+
+    // Profile picture is strictly compulsory
+    if (!avatarFile && !avatarPreview) {
+      setErrorMsg("Profile avatar photo is compulsory. Please click the circular avatar to upload an image.");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       let publicAvatarUrl = "";
 
-      // 1. Upload avatar to Supabase Storage bucket 'avatars' if provided
+      // 1. Upload avatar to Supabase Storage bucket 'avatars'
       if (avatarFile) {
         const fileExt = avatarFile.name.split(".").pop();
         const fileName = `${walletAddress}-${Date.now()}.${fileExt}`;
@@ -70,12 +77,15 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
 
         if (uploadError) {
           console.warn("Avatar upload error:", uploadError.message);
+          publicAvatarUrl = avatarPreview || "";
         } else {
           const { data: publicData } = supabase.storage
             .from("avatars")
             .getPublicUrl(fileName);
           publicAvatarUrl = publicData.publicUrl;
         }
+      } else if (avatarPreview) {
+        publicAvatarUrl = avatarPreview;
       }
 
       // 2. Sign in or authenticate session with Supabase
@@ -113,7 +123,7 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
           id: userId,
           wallet_address: walletAddress,
           full_name: fullName || "Operator",
-          avatar_url: publicAvatarUrl || avatarPreview || "",
+          avatar_url: publicAvatarUrl,
           updated_at: new Date().toISOString(),
         });
 
@@ -128,7 +138,7 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
         JSON.stringify({
           walletAddress,
           fullName: fullName || "Operator",
-          avatarUrl: publicAvatarUrl || avatarPreview || "",
+          avatarUrl: publicAvatarUrl,
           isAuthenticated: true,
         })
       );
@@ -155,10 +165,6 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
         </button>
 
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-primary font-mono-data text-xs uppercase font-bold">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            AgentOps Web3 Authentication
-          </div>
           <h2 className="font-display-lg text-headline-md text-on-surface">
             {step === "connect" ? "Connect Wallet to Access Console" : "Complete Operator Profile"}
           </h2>
@@ -188,48 +194,54 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
           </div>
         ) : (
           <form onSubmit={completeOnboarding} className="flex flex-col gap-5">
+            {/* Clickable Circular Avatar Upload */}
+            <div className="flex flex-col items-center justify-center gap-2 pt-1">
+              <label className="relative group cursor-pointer w-24 h-24 rounded-full border-2 border-dashed border-outline-variant hover:border-primary transition-all flex items-center justify-center overflow-hidden bg-surface-container-high shadow-inner">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center text-on-surface-variant group-hover:text-primary transition-colors">
+                    <MdCameraAlt className="text-3xl" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white gap-1">
+                  <MdCameraAlt className="text-2xl" />
+                  <span className="font-mono-data text-[9px] uppercase">Change</span>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </label>
+              <span className="font-mono-data text-[11px] text-on-surface-variant text-center">
+                Click circular avatar to upload photo <span className="text-error">*</span>
+              </span>
+            </div>
+
             <div className="flex flex-col gap-2">
               <label className="font-mono-data text-xs text-on-surface-variant font-semibold">
                 CONNECTED SEPOLIA WALLET &amp; BALANCE
               </label>
               <div className="bg-surface-container-high px-3.5 py-2.5 rounded-lg font-mono-data text-xs text-primary flex items-center justify-between border border-outline-variant/30">
-                <span className="truncate max-w-[220px]">{walletAddress}</span>
+                <span className="truncate max-w-[200px]">{walletAddress}</span>
                 <span className="font-bold text-on-surface shrink-0 ml-2">{parseFloat(walletBalance || "0").toFixed(4)} ETH</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <label className="font-mono-data text-xs text-on-surface font-semibold">
-                OPERATOR NAME / HANDLE *
+                OPERATOR NAME *
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Alex (Treasury Manager)"
+                placeholder="e.g. Alex"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="w-full bg-surface-container-high border border-outline-variant/40 rounded-lg px-4 py-3 font-mono-data text-xs text-on-surface focus:outline-none focus:border-primary"
               />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="font-mono-data text-xs text-on-surface font-semibold">
-                PROFILE AVATAR (SUPABASE BUCKET)
-              </label>
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-surface-container-highest border border-outline-variant/40 flex items-center justify-center overflow-hidden shrink-0">
-                  {avatarPreview ? (
-                    <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="font-mono-data text-xs text-on-surface-variant">IMG</span>
-                  )}
-                </div>
-                <label className="cursor-pointer bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 text-on-surface px-4 py-2.5 rounded-lg font-mono-data text-xs flex items-center gap-2 transition-colors">
-                  <MdCloudUpload className="text-base text-primary" />
-                  Upload Photo
-                  <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                </label>
-              </div>
             </div>
 
             <button
@@ -238,7 +250,7 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
               className="w-full mt-2 bg-primary hover:bg-primary-container text-on-primary font-label-caps text-label-caps py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             >
               <MdCheck className="text-xl" />
-              {loading ? "SAVING TO SUPABASE..." : "COMPLETE ONBOARDING & LAUNCH CONSOLE"}
+              {loading ? "SAVING PROFILE..." : "COMPLETE ONBOARDING & LAUNCH CONSOLE"}
             </button>
           </form>
         )}
