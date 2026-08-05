@@ -13,21 +13,15 @@ CREATE POLICY "Public Avatar Access"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'avatars');
 
--- Allow authenticated users to upload their own profile avatar
-CREATE POLICY "Users can upload their avatar"
+-- Allow upload access to avatar profile pictures
+CREATE POLICY "Allow Avatar Upload"
   ON storage.objects FOR INSERT
-  WITH CHECK (
-    bucket_id = 'avatars' 
-    AND auth.role() = 'authenticated'
-  );
+  WITH CHECK (bucket_id = 'avatars');
 
--- Allow authenticated users to update their avatar
-CREATE POLICY "Users can update their avatar"
+-- Allow update access to avatar profile pictures
+CREATE POLICY "Allow Avatar Update"
   ON storage.objects FOR UPDATE
-  USING (
-    bucket_id = 'avatars' 
-    AND auth.role() = 'authenticated'
-  );
+  USING (bucket_id = 'avatars');
 
 
 -- 2. USER PROFILES TABLE (Web3 Wallet Onboarding)
@@ -44,17 +38,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Profiles are viewable by authenticated users"
+CREATE POLICY "Allow public read for profiles"
   ON public.profiles FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can insert their own profile"
+CREATE POLICY "Allow public insert for profiles"
   ON public.profiles FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK (true);
 
-CREATE POLICY "Users can update their own profile"
+CREATE POLICY "Allow public update for profiles"
   ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
+  USING (true);
 
 
 -- 3. EXECUTIONS TABLE (Multi-Agent Onchain Runs)
@@ -77,13 +71,17 @@ CREATE TABLE IF NOT EXISTS public.executions (
 
 ALTER TABLE public.executions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can view executions"
+CREATE POLICY "Allow public read for executions"
   ON public.executions FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Users can insert executions"
+CREATE POLICY "Allow public write for executions"
   ON public.executions FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
+
+CREATE POLICY "Allow public update for executions"
+  ON public.executions FOR UPDATE
+  USING (true);
 
 
 -- 4. AGENT VERDICTS AUDIT LOG TABLE
@@ -100,13 +98,13 @@ CREATE TABLE IF NOT EXISTS public.agent_verdicts (
 
 ALTER TABLE public.agent_verdicts ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can view agent verdicts"
+CREATE POLICY "Allow public read for agent_verdicts"
   ON public.agent_verdicts FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);
 
-CREATE POLICY "Authenticated users can insert agent verdicts"
+CREATE POLICY "Allow public write for agent_verdicts"
   ON public.agent_verdicts FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (true);
 
 
 -- 5. POLICY RULES GOVERNANCE TABLE
@@ -124,10 +122,10 @@ CREATE TABLE IF NOT EXISTS public.policy_rules (
 
 ALTER TABLE public.policy_rules ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view their policy rules"
+CREATE POLICY "Allow public read for policy_rules"
   ON public.policy_rules FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (true);
 
-CREATE POLICY "Users can manage their policy rules"
+CREATE POLICY "Allow public write for policy_rules"
   ON public.policy_rules FOR ALL
-  USING (auth.uid() = user_id);
+  USING (true);

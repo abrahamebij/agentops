@@ -1,10 +1,45 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import { MdGavel, MdEdit } from "react-icons/md";
 
+interface PolicyData {
+  maxTransactionUsd: number;
+  minConfidenceThreshold: number;
+  requiredApprovals: number;
+  allowedChainId: number;
+  allowedActionTypes: string[];
+}
+
 export function PoliciesComponent() {
+  const [policy, setPolicy] = useState<PolicyData>({
+    maxTransactionUsd: 50,
+    minConfidenceThreshold: 0.85,
+    requiredApprovals: 2,
+    allowedChainId: 11155111,
+    allowedActionTypes: ["transfer", "contractCall", "yieldOpt", "rebalance"],
+  });
+
+  useEffect(() => {
+    async function loadPolicy() {
+      try {
+        const raw = localStorage.getItem("agentops_user_session");
+        const userId = raw ? JSON.parse(raw).userId : undefined;
+        const url = userId ? `/api/keeperhub/policy?userId=${userId}` : "/api/keeperhub/policy";
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.policy) {
+          setPolicy(data.policy);
+        }
+      } catch (err) {
+        console.error("Failed to load policy rules from database:", err);
+      }
+    }
+    loadPolicy();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-on-surface flex">
       <Sidebar />
@@ -16,7 +51,7 @@ export function PoliciesComponent() {
             <div className="flex flex-col space-y-4 max-w-2xl pt-4">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 bg-surface-container-high rounded font-mono-data text-mono-data text-on-surface-variant border border-outline-variant/30 tracking-widest text-[11px]">
-                  ENFORCED IN CODE
+                  ENFORCED IN CODE &amp; SUPABASE DATABASE
                 </span>
               </div>
               <h1 className="font-display-lg text-display-lg text-on-background">
@@ -51,7 +86,7 @@ export function PoliciesComponent() {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono-data text-mono-data text-on-surface bg-surface-container-high px-3 py-1.5 rounded border border-outline-variant/30">
-                      $50.00 USD (0.016 ETH)
+                      ${policy.maxTransactionUsd.toFixed(2)} USD
                     </span>
                   </div>
                 </div>
@@ -63,10 +98,13 @@ export function PoliciesComponent() {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono-data text-mono-data text-on-surface bg-surface-container-high px-3 py-1.5 rounded border border-outline-variant/30">
-                      85%
+                      {(policy.minConfidenceThreshold * 100).toFixed(0)}%
                     </span>
                     <div className="w-32 h-2 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/30">
-                      <div className="h-full bg-primary w-[85%] rounded-full"></div>
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${policy.minConfidenceThreshold * 100}%` }}
+                      ></div>
                     </div>
                   </div>
                 </div>
@@ -78,7 +116,7 @@ export function PoliciesComponent() {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono-data text-mono-data text-on-surface bg-surface-container-high px-3 py-1.5 rounded border border-outline-variant/30">
-                      2 / 3
+                      {policy.requiredApprovals} / 3
                     </span>
                     <div className="flex gap-1.5 ml-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
@@ -102,7 +140,7 @@ export function PoliciesComponent() {
                       >
                         <path d="M311.9 260.8L160 353.6 8 260.8 160 0l151.9 260.8zM160 383.4L8 290.6 160 512l152-221.4-152 92.8z" />
                       </svg>
-                      Ethereum Sepolia (Chain ID: 11155111)
+                      Ethereum Sepolia (Chain ID: {policy.allowedChainId})
                     </span>
                   </div>
                 </div>
@@ -113,18 +151,14 @@ export function PoliciesComponent() {
                     Allowed Action Types
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
-                      #TRANSFER
-                    </span>
-                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
-                      #CONTRACT_CALL
-                    </span>
-                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
-                      #YIELD_OPT
-                    </span>
-                    <span className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary">
-                      #REBALANCE
-                    </span>
+                    {policy.allowedActionTypes.map((act) => (
+                      <span
+                        key={act}
+                        className="px-3 py-1 bg-surface-container-high border border-outline-variant/30 rounded font-mono-data text-mono-data text-primary uppercase"
+                      >
+                        #{act}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

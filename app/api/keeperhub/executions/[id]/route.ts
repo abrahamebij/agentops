@@ -7,7 +7,10 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
-    const record = getExecutionById(resolvedParams.id);
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId") || undefined;
+
+    const record = await getExecutionById(resolvedParams.id, userId);
     if (!record) {
       return NextResponse.json({ error: "Execution record not found" }, { status: 404 });
     }

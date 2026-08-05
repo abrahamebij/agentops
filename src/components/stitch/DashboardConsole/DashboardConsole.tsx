@@ -26,7 +26,10 @@ export function DashboardConsole() {
   useEffect(() => {
     async function loadExecutions() {
       try {
-        const res = await fetch("/api/keeperhub/multi-agent-execution");
+        const raw = localStorage.getItem("agentops_user_session");
+        const userId = raw ? JSON.parse(raw).userId : undefined;
+        const url = userId ? `/api/keeperhub/multi-agent-execution?userId=${userId}` : "/api/keeperhub/multi-agent-execution";
+        const res = await fetch(url);
         const data = await res.json();
         if (data.executions && Array.isArray(data.executions)) {
           const records: ExecutionRecord[] = data.executions.map((e: {

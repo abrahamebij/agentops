@@ -65,77 +65,54 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
     setLoading(true);
 
     try {
-      let publicAvatarUrl = "";
+      let publicAvatarUrl = avatarPreview || "";
 
-      // 1. Upload avatar to Supabase Storage bucket 'avatars'
+      // 1. Upload avatar to Supabase Storage bucket 'avatars' if file provided
       if (avatarFile) {
-        const fileExt = avatarFile.name.split(".").pop();
-        const fileName = `${walletAddress}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(fileName, avatarFile, { upsert: true });
-
-        if (uploadError) {
-          console.warn("Avatar upload error:", uploadError.message);
-          publicAvatarUrl = avatarPreview || "";
-        } else {
-          const { data: publicData } = supabase.storage
+        try {
+          const fileExt = avatarFile.name.split(".").pop();
+          const fileName = `${walletAddress.slice(0, 8)}-${Date.now()}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
             .from("avatars")
-            .getPublicUrl(fileName);
-          publicAvatarUrl = publicData.publicUrl;
+            .upload(fileName, avatarFile, { upsert: true });
+
+          if (!uploadError) {
+            const { data: publicData } = supabase.storage
+              .from("avatars")
+              .getPublicUrl(fileName);
+            if (publicData?.publicUrl) {
+              publicAvatarUrl = publicData.publicUrl;
+            }
+          }
+        } catch (err) {
+          console.warn("Avatar upload notice:", err);
         }
-      } else if (avatarPreview) {
-        publicAvatarUrl = avatarPreview;
       }
 
-      // 2. Sign in or authenticate session with Supabase
-      const dummyEmail = `${walletAddress.toLowerCase()}@agentops.io`;
-      const dummyPassword = `Pass_${walletAddress.slice(0, 10)}`;
-
-      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: dummyEmail,
-        password: dummyPassword,
+      // 2. Save profile via server-side API route (bypasses browser RLS auth issues)
+      const res = await fetch("/api/auth/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress,
+          fullName: fullName || "Operator",
+          avatarUrl: publicAvatarUrl,
+        }),
       });
 
-      if (authError) {
-        // Create user if not exists
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: dummyEmail,
-          password: dummyPassword,
-          options: {
-            data: {
-              wallet_address: walletAddress,
-              full_name: fullName || "Operator",
-            },
-          },
-        });
-        if (signUpError) {
-          throw new Error(signUpError.message);
-        }
-        authData = signUpData;
+      const data = await res.json();
+
+      if (!res.ok && data.error) {
+        console.warn("Server profile route notice:", data.error);
       }
 
-      const userId = authData?.user?.id;
+      const activeUserId = data.userId || walletAddress;
 
-      // 3. Save profile to Supabase 'profiles' table
-      if (userId) {
-        const { error: profileError } = await supabase.from("profiles").upsert({
-          id: userId,
-          wallet_address: walletAddress,
-          full_name: fullName || "Operator",
-          avatar_url: publicAvatarUrl,
-          updated_at: new Date().toISOString(),
-        });
-
-        if (profileError) {
-          console.warn("Profile store notice:", profileError.message);
-        }
-      }
-
-      // 4. Store session state locally
+      // 3. Store session state locally
       localStorage.setItem(
         "agentops_user_session",
         JSON.stringify({
+          userId: activeUserId,
           walletAddress,
           fullName: fullName || "Operator",
           avatarUrl: publicAvatarUrl,

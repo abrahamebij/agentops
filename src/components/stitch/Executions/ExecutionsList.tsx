@@ -39,7 +39,10 @@ export function ExecutionsList() {
   useEffect(() => {
     async function loadExecutions() {
       try {
-        const res = await fetch("/api/keeperhub/multi-agent-execution");
+        const raw = localStorage.getItem("agentops_user_session");
+        const userId = raw ? JSON.parse(raw).userId : undefined;
+        const url = userId ? `/api/keeperhub/multi-agent-execution?userId=${userId}` : "/api/keeperhub/multi-agent-execution";
+        const res = await fetch(url);
         const data = await res.json();
         if (data.executions && Array.isArray(data.executions)) {
           const mapped: ExecutionRecord[] = data.executions.map((e: {
@@ -87,10 +90,14 @@ export function ExecutionsList() {
   const triggerNewExecution = async () => {
     setIsRunning(true);
     try {
+      const raw = localStorage.getItem("agentops_user_session");
+      const userId = raw ? JSON.parse(raw).userId : undefined;
+
       const res = await fetch("/api/keeperhub/multi-agent-execution", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          userId,
           triggerDescription: "Scheduled treasury payment: transfer 0.0001 ETH to approved wallet 0x97271d60c7e41de4f2d37752008e3c18e9108b12",
           amountEth: "0.0001",
           recipientAddress: "0x97271d60c7e41de4f2d37752008e3c18e9108b12",
