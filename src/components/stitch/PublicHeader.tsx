@@ -60,12 +60,6 @@ export function PublicHeader() {
             >
               OVERVIEW
             </Link>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors"
-            >
-              ONBOARDING
-            </button>
 
             {userSession?.isAuthenticated ? (
               <div className="flex items-center gap-3">
