@@ -24,15 +24,23 @@ export function LandingPage() {
                 Prevent rogue agent transactions with 3-agent consensus, deterministic policy enforcement, and live execution audit trails.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-                <Link
-                  href="/dashboard"
-                  className="bg-primary hover:bg-primary-container text-on-primary px-8 py-4 font-label-caps text-label-caps rounded-sm transition-colors relative group overflow-hidden inline-flex items-center gap-2"
+                <button
+                  onClick={() => {
+                    const raw = localStorage.getItem("agentops_user_session");
+                    if (raw && JSON.parse(raw).isAuthenticated) {
+                      window.location.href = "/dashboard";
+                    } else {
+                      // Trigger header onboarding modal by triggering custom event or navigation
+                      window.dispatchEvent(new CustomEvent("open-onboarding"));
+                    }
+                  }}
+                  className="bg-primary hover:bg-primary-container text-on-primary px-8 py-4 font-label-caps text-label-caps rounded-sm transition-colors relative group overflow-hidden inline-flex items-center gap-2 cursor-pointer"
                 >
                   <span className="relative z-10 flex items-center gap-2">
                     LAUNCH DASHBOARD
                     <MdArrowForward className="text-[16px] group-hover:translate-x-1 transition-transform" />
                   </span>
-                </Link>
+                </button>
                 <a
                   href="https://github.com"
                   target="_blank"

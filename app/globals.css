@@ -74,6 +74,9 @@
   main > :last-child {
     margin-bottom: 0 !important;
   }
+  button{
+    cursor: pointer;
+  }
 }
 
 ::-webkit-scrollbar {
