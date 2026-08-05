@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
 import { MdAccountBalanceWallet, MdCloudUpload, MdCheck, MdClose } from "react-icons/md";
 
+import { connectViemWallet } from "@/src/lib/web3/viemClient";
+
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,7 +18,8 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
   const supabase = createClient();
 
   const [step, setStep] = useState<"connect" | "profile">("connect");
-  const [walletAddress, setWalletAddress] = useState<string>("0x97271d60c7e41de4f2d37752008e3c18e9108b12");
+  const [walletAddress, setWalletAddress] = useState<string>("");
+  const [walletBalance, setWalletBalance] = useState<string>("");
   const [fullName, setFullName] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -25,20 +28,20 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
 
   if (!isOpen) return null;
 
-  const connectBrowserWallet = async () => {
+  const handleViemConnect = async () => {
     setErrorMsg(null);
-    if (typeof window !== "undefined" && (window as unknown as { ethereum?: { request: (args: { method: string }) => Promise<string[]> } }).ethereum) {
-      try {
-        const eth = (window as unknown as { ethereum: { request: (args: { method: string }) => Promise<string[]> } }).ethereum;
-        const accounts = await eth.request({ method: "eth_requestAccounts" });
-        if (accounts && accounts[0]) {
-          setWalletAddress(accounts[0]);
-        }
-      } catch (err) {
-        console.error("Wallet connection failed:", err);
-      }
+    setLoading(true);
+    try {
+      const res = await connectViemWallet();
+      setWalletAddress(res.address);
+      setWalletBalance(res.balanceEth);
+      setStep("profile");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to connect wallet via Viem";
+      setErrorMsg(msg);
+    } finally {
+      setLoading(false);
     }
-    setStep("profile");
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,21 +178,23 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
         {step === "connect" ? (
           <div className="flex flex-col gap-4 pt-2">
             <button
-              onClick={connectBrowserWallet}
-              className="w-full bg-primary hover:bg-primary-container text-on-primary font-label-caps text-label-caps py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              onClick={handleViemConnect}
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary-container text-on-primary font-label-caps text-label-caps py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             >
               <MdAccountBalanceWallet className="text-xl" />
-              CONNECT METAMASK / BROWSER WALLET
+              {loading ? "CONNECTING VIA VIEM..." : "CONNECT METAMASK / VIEM WALLET"}
             </button>
           </div>
         ) : (
           <form onSubmit={completeOnboarding} className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <label className="font-mono-data text-xs text-on-surface-variant font-semibold">
-                CONNECTED WALLET ADDRESS
+                CONNECTED SEPOLIA WALLET &amp; BALANCE
               </label>
-              <div className="bg-surface-container-high px-3 py-2 rounded font-mono-data text-xs text-primary truncate border border-outline-variant/30">
-                {walletAddress}
+              <div className="bg-surface-container-high px-3.5 py-2.5 rounded-lg font-mono-data text-xs text-primary flex items-center justify-between border border-outline-variant/30">
+                <span className="truncate max-w-[220px]">{walletAddress}</span>
+                <span className="font-bold text-on-surface shrink-0 ml-2">{parseFloat(walletBalance || "0").toFixed(4)} ETH</span>
               </div>
             </div>
 
