@@ -22,6 +22,8 @@ export function DashboardConsole() {
   const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [successRate, setSuccessRate] = useState<string>("100.0%");
+  const [activePolicies, setActivePolicies] = useState<number | null>(null);
+  const [activeAgents, setActiveAgents] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadExecutions() {
@@ -64,7 +66,46 @@ export function DashboardConsole() {
         console.error("Failed to load dashboard executions:", err);
       }
     }
+
+    async function loadActivePolicies() {
+      try {
+        const raw = localStorage.getItem("agentops_user_session");
+        const userId = raw ? JSON.parse(raw).userId : undefined;
+        const url = userId ? `/api/keeperhub/policy?userId=${userId}` : "/api/keeperhub/policy";
+        const res = await fetch(url);
+        const data = await res.json();
+        // getUserPolicy always returns exactly 1 policy row per user (auto-seeded).
+        // We confirm it exists by checking the response is a valid policy object.
+        setActivePolicies(data.policy ? 1 : 0);
+      } catch (err) {
+        console.error("Failed to load active policy count:", err);
+        setActivePolicies(0);
+      }
+    }
+
+    async function loadActiveAgents() {
+      try {
+        const raw = localStorage.getItem("agentops_user_session");
+        const userId = raw ? JSON.parse(raw).userId : undefined;
+        const url = userId ? `/api/keeperhub/agents?userId=${userId}` : "/api/keeperhub/agents";
+        const res = await fetch(url);
+        const data = await res.json();
+        // The agents endpoint always returns a fixed object with keys: analyst, security, risk.
+        // Count the keys to derive the active agent count from the actual API response shape.
+        if (data.agents && typeof data.agents === "object") {
+          setActiveAgents(Object.keys(data.agents).length);
+        } else {
+          setActiveAgents(0);
+        }
+      } catch (err) {
+        console.error("Failed to load active agent count:", err);
+        setActiveAgents(0);
+      }
+    }
+
     loadExecutions();
+    loadActivePolicies();
+    loadActiveAgents();
   }, []);
 
   return (
@@ -97,7 +138,11 @@ export function DashboardConsole() {
                   Active Policies
                 </span>
                 <span className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
-                  5
+                  {activePolicies === null ? (
+                    <span className="inline-block w-6 h-6 bg-surface-container-high rounded animate-pulse" />
+                  ) : (
+                    activePolicies
+                  )}
                 </span>
               </div>
 
@@ -126,7 +171,11 @@ export function DashboardConsole() {
                   Active Agents
                 </span>
                 <span className="font-display-lg-mobile text-display-lg-mobile text-on-surface">
-                  3
+                  {activeAgents === null ? (
+                    <span className="inline-block w-6 h-6 bg-surface-container-high rounded animate-pulse" />
+                  ) : (
+                    activeAgents
+                  )}
                 </span>
               </div>
             </section>
