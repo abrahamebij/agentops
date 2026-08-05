@@ -47,8 +47,15 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
       setErrorMsg(null);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setAvatarPreview(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -65,47 +72,20 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
     setLoading(true);
 
     try {
-      let publicAvatarUrl = avatarPreview || "";
-
-      // 1. Upload avatar to Supabase Storage bucket 'avatars' if file provided
-      if (avatarFile) {
-        try {
-          const fileExt = avatarFile.name.split(".").pop();
-          const fileName = `${walletAddress.slice(0, 8)}-${Date.now()}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from("avatars")
-            .upload(fileName, avatarFile, { upsert: true });
-
-          if (!uploadError) {
-            const { data: publicData } = supabase.storage
-              .from("avatars")
-              .getPublicUrl(fileName);
-            if (publicData?.publicUrl) {
-              publicAvatarUrl = publicData.publicUrl;
-            }
-          }
-        } catch (err) {
-          console.warn("Avatar upload notice:", err);
-        }
-      }
-
-      // 2. Save profile via server-side API route (bypasses browser RLS auth issues)
+      // Send base64 payload to server route (server uses SUPABASE_SERVICE_ROLE_KEY to bypass RLS)
       const res = await fetch("/api/auth/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress,
           fullName: fullName || "Operator",
-          avatarUrl: publicAvatarUrl,
+          avatarUrl: avatarPreview,
+          avatarBase64: avatarPreview,
         }),
       });
 
       const data = await res.json();
-
-      if (!res.ok && data.error) {
-        console.warn("Server profile route notice:", data.error);
-      }
-
+      const finalAvatarUrl = data.avatarUrl || avatarPreview || "";
       const activeUserId = data.userId || walletAddress;
 
       // 3. Store session state locally
@@ -115,7 +95,7 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
           userId: activeUserId,
           walletAddress,
           fullName: fullName || "Operator",
-          avatarUrl: publicAvatarUrl,
+          avatarUrl: finalAvatarUrl,
           isAuthenticated: true,
         })
       );

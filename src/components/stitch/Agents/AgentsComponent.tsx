@@ -1,10 +1,46 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import { MdAccountTree } from "react-icons/md";
 
+interface AgentStats {
+  approvalRate: string;
+  totalExecutions: number;
+  latencyMs: number;
+  version: string;
+}
+
 export function AgentsComponent() {
+  const [stats, setStats] = useState<{
+    analyst: AgentStats;
+    security: AgentStats;
+    risk: AgentStats;
+  }>({
+    analyst: { approvalRate: "100.0%", totalExecutions: 0, latencyMs: 89, version: "v4.2.1-epsilon" },
+    security: { approvalRate: "100.0%", totalExecutions: 0, latencyMs: 142, version: "v2.9.0-delta" },
+    risk: { approvalRate: "100.0%", totalExecutions: 0, latencyMs: 64, version: "v3.1.5-gamma" },
+  });
+
+  useEffect(() => {
+    async function loadAgentStats() {
+      try {
+        const raw = localStorage.getItem("agentops_user_session");
+        const userId = raw ? JSON.parse(raw).userId : undefined;
+        const url = userId ? `/api/keeperhub/agents?userId=${userId}` : "/api/keeperhub/agents";
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.agents) {
+          setStats(data.agents);
+        }
+      } catch (err) {
+        console.error("Failed to load agent statistics from database:", err);
+      }
+    }
+    loadAgentStats();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-on-surface flex">
       <Sidebar />
@@ -18,7 +54,7 @@ export function AgentsComponent() {
                 System Agents
               </h1>
               <p className="font-body-base text-body-base text-on-surface-variant max-w-2xl">
-                Autonomous models monitoring and verifying every onchain execution.
+                Autonomous models monitoring and verifying every onchain execution from Supabase DB.
               </p>
             </div>
 
@@ -34,7 +70,7 @@ export function AgentsComponent() {
                         Analyst Model
                       </h2>
                       <span className="font-mono-data text-mono-data text-outline">
-                        v4.2.1-epsilon
+                        {stats.analyst.version}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 rounded shadow-sm border border-outline-variant/30">
@@ -54,26 +90,8 @@ export function AgentsComponent() {
                       </span>
                       <div className="flex items-center gap-3">
                         <span className="font-mono-data text-mono-data text-primary">
-                          94.2%
+                          {stats.analyst.approvalRate}
                         </span>
-                        <svg
-                          className="w-4 h-4 text-primary"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="3"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            className="opacity-20"
-                            d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                          />
-                          <path
-                            d="M12 22c5.523 0 10-4.477 10-10"
-                            strokeDasharray="100"
-                            strokeDashoffset="6"
-                          />
-                        </svg>
                       </div>
                     </div>
                     <div className="flex items-center justify-between bg-surface-container rounded p-3 shadow-sm border border-outline-variant/20">
@@ -81,7 +99,7 @@ export function AgentsComponent() {
                         LATENCY
                       </span>
                       <span className="font-mono-data text-mono-data text-on-surface">
-                        89ms
+                        {stats.analyst.latencyMs}ms
                       </span>
                     </div>
                     <div className="flex items-center justify-between bg-surface-container rounded p-3 shadow-sm border border-outline-variant/20">
@@ -89,7 +107,7 @@ export function AgentsComponent() {
                         EXECUTIONS
                       </span>
                       <span className="font-mono-data text-mono-data text-on-surface">
-                        1,240
+                        {stats.analyst.totalExecutions}
                       </span>
                     </div>
                   </div>
@@ -106,7 +124,7 @@ export function AgentsComponent() {
                         Security Model
                       </h2>
                       <span className="font-mono-data text-mono-data text-outline">
-                        v2.9.0-delta
+                        {stats.security.version}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 rounded shadow-sm border border-outline-variant/30">
@@ -126,26 +144,8 @@ export function AgentsComponent() {
                       </span>
                       <div className="flex items-center gap-3">
                         <span className="font-mono-data text-mono-data text-primary">
-                          99.9%
+                          {stats.security.approvalRate}
                         </span>
-                        <svg
-                          className="w-4 h-4 text-primary"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="3"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            className="opacity-20"
-                            d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                          />
-                          <path
-                            d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2"
-                            strokeDasharray="100"
-                            strokeDashoffset="0"
-                          />
-                        </svg>
                       </div>
                     </div>
                     <div className="flex items-center justify-between bg-surface-container rounded p-3 shadow-sm border border-outline-variant/20">
@@ -153,7 +153,7 @@ export function AgentsComponent() {
                         LATENCY
                       </span>
                       <span className="font-mono-data text-mono-data text-on-surface">
-                        142ms
+                        {stats.security.latencyMs}ms
                       </span>
                     </div>
                     <div className="flex items-center justify-between bg-surface-container rounded p-3 shadow-sm border border-outline-variant/20">
@@ -161,7 +161,7 @@ export function AgentsComponent() {
                         EXECUTIONS
                       </span>
                       <span className="font-mono-data text-mono-data text-on-surface">
-                        1,240
+                        {stats.security.totalExecutions}
                       </span>
                     </div>
                   </div>
@@ -178,7 +178,7 @@ export function AgentsComponent() {
                         Risk Model
                       </h2>
                       <span className="font-mono-data text-mono-data text-outline">
-                        v3.1.5-gamma
+                        {stats.risk.version}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 rounded shadow-sm border border-outline-variant/30">
@@ -198,26 +198,8 @@ export function AgentsComponent() {
                       </span>
                       <div className="flex items-center gap-3">
                         <span className="font-mono-data text-mono-data text-primary">
-                          88.5%
+                          {stats.risk.approvalRate}
                         </span>
-                        <svg
-                          className="w-4 h-4 text-primary"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="3"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            className="opacity-20"
-                            d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                          />
-                          <path
-                            d="M12 22c5.523 0 10-4.477 10-10S17.523 2 2 12"
-                            strokeDasharray="100"
-                            strokeDashoffset="12"
-                          />
-                        </svg>
                       </div>
                     </div>
                     <div className="flex items-center justify-between bg-surface-container rounded p-3 shadow-sm border border-outline-variant/20">
@@ -225,7 +207,7 @@ export function AgentsComponent() {
                         LATENCY
                       </span>
                       <span className="font-mono-data text-mono-data text-on-surface">
-                        64ms
+                        {stats.risk.latencyMs}ms
                       </span>
                     </div>
                     <div className="flex items-center justify-between bg-surface-container rounded p-3 shadow-sm border border-outline-variant/20">
@@ -233,7 +215,7 @@ export function AgentsComponent() {
                         EXECUTIONS
                       </span>
                       <span className="font-mono-data text-mono-data text-on-surface">
-                        1,240
+                        {stats.risk.totalExecutions}
                       </span>
                     </div>
                   </div>

@@ -86,9 +86,20 @@ export async function addExecution(record: StoredExecutionRecord, userId?: strin
   const supabase = createServerClient();
 
   try {
+    // Verify if userId exists in profiles to satisfy FK constraint
+    let validUserId: string | null = null;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+      if (profile) validUserId = userId;
+    }
+
     const executionRow = {
       id: record.id,
-      user_id: userId || null,
+      user_id: validUserId,
       trigger_description: record.triggerDescription,
       recipient_address: record.recipientAddress,
       amount_eth: record.amountEth,
@@ -106,7 +117,12 @@ export async function addExecution(record: StoredExecutionRecord, userId?: strin
 
     if (execError) {
       console.warn("Failed to insert execution into Supabase:", execError.message);
-      return;
+      // Retry with user_id: null if foreign key constraint failed
+      if (execError.message.includes("foreign key constraint")) {
+        await supabase.from("executions").upsert({ ...executionRow, user_id: null });
+      } else {
+        return;
+      }
     }
 
     // Insert 3 agent verdicts rows linked via execution_id
