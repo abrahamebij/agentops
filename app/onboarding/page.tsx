@@ -18,6 +18,7 @@ export default function OnboardingPage() {
   const [fullName, setFullName] = useState<string>("");
   const [avatarBase64, setAvatarBase64] = useState<string>("");
   const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [avatarError, setAvatarError] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [nameError, setNameError] = useState<boolean>(false);
@@ -54,18 +55,27 @@ export default function OnboardingPage() {
       const result = ev.target?.result as string;
       setAvatarBase64(result);
       setAvatarPreview(result);
+      setAvatarError(false);
     };
     reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let hasError = false;
     if (!fullName.trim()) {
       setNameError(true);
       setErrorMsg("Please enter your display name.");
-      return;
+      hasError = true;
     }
+    if (!avatarBase64) {
+      setAvatarError(true);
+      if (!hasError) setErrorMsg("Please upload a profile photo.");
+      hasError = true;
+    }
+    if (hasError) return;
     setNameError(false);
+    setAvatarError(false);
     setErrorMsg(null);
     setLoading(true);
 
@@ -154,7 +164,11 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="relative w-24 h-24 rounded-full bg-primary/10 border-2 border-dashed border-primary/40 overflow-hidden flex items-center justify-center hover:border-primary/70 hover:bg-primary/20 transition-all group"
+              className={`relative w-24 h-24 rounded-full overflow-hidden flex items-center justify-center transition-all group border-2 border-dashed ${
+                avatarError
+                  ? "bg-error/10 border-error/60 hover:border-error"
+                  : "bg-primary/10 border-primary/40 hover:border-primary/70 hover:bg-primary/20"
+              }`}
             >
               {avatarPreview ? (
                 <>
@@ -164,14 +178,13 @@ export default function OnboardingPage() {
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center gap-1 text-primary/60 group-hover:text-primary transition-colors">
+                <div className={`flex items-center justify-center ${avatarError ? "text-error/60" : "text-primary/60 group-hover:text-primary"} transition-colors`}>
                   <MdPerson className="text-4xl" />
-                  <MdUpload className="text-sm" />
                 </div>
               )}
             </button>
-            <span className="text-on-surface-variant font-mono-data text-[10px]">
-              {avatarPreview ? "Click avatar to change" : "Upload profile photo (optional)"}
+            <span className={`font-mono-data text-[10px] ${avatarError ? "text-error" : "text-on-surface-variant"}`}>
+              {avatarPreview ? "Click avatar to change" : "Upload profile photo"} <span className="text-error">*</span>
             </span>
             <input
               ref={fileInputRef}
@@ -218,7 +231,7 @@ export default function OnboardingPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading || !fullName.trim()}
+            disabled={loading || !fullName.trim() || !avatarBase64}
             className="w-full bg-primary hover:bg-primary-container text-on-primary font-label-caps text-label-caps py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
