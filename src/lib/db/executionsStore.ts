@@ -2,6 +2,8 @@ import { AgentPanelResult } from "../agent/agentPanel";
 import { AgentDecision } from "../agent/analystAgent";
 import { ConsensusResult } from "../consensus/consensusEngine";
 import { PolicyResult } from "../policy/policyEngine";
+import { createServerClient } from "../supabase/server";
+
 // KeeperHubExecutionResult is the shape of MultiAgentOrchestrationResult["keeperhubResult"]
 export interface KeeperHubExecutionResult {
   simulationPassed: boolean;
@@ -14,7 +16,6 @@ export interface KeeperHubExecutionResult {
   replayVerified?: boolean;
   error?: string;
 }
-import { createServerClient } from "../supabase/server";
 
 export interface StoredExecutionRecord {
   id: string;
@@ -33,7 +34,22 @@ export interface StoredExecutionRecord {
   keeperhubResult: KeeperHubExecutionResult | null;
 }
 
-export async function getExecutions(userId?: string): Promise<StoredExecutionRecord[]> {
+// Resolves the real Supabase profile UUID from a wallet address.
+// The wallet address is the single reliable identifier — it comes directly from
+// the wallet connection and is always stored correctly in the session.
+async function resolveUserIdFromWallet(
+  supabase: ReturnType<typeof createServerClient>,
+  walletAddress: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("id")
+    .ilike("wallet_address", walletAddress.trim())
+    .maybeSingle();
+  return data ? data.id : null;
+}
+
+export async function getExecutions(walletAddress?: string): Promise<StoredExecutionRecord[]> {
   const supabase = createServerClient();
 
   try {
@@ -42,8 +58,11 @@ export async function getExecutions(userId?: string): Promise<StoredExecutionRec
       .select("*, agent_verdicts(*)")
       .order("created_at", { ascending: false });
 
-    if (userId) {
-      query = query.eq("user_id", userId);
+    if (walletAddress) {
+      const resolvedId = await resolveUserIdFromWallet(supabase, walletAddress);
+      if (resolvedId) {
+        query = query.eq("user_id", resolvedId);
+      }
     }
 
     const { data, error } = await query;
@@ -60,7 +79,7 @@ export async function getExecutions(userId?: string): Promise<StoredExecutionRec
   }
 }
 
-export async function getExecutionById(id: string, userId?: string): Promise<StoredExecutionRecord | null> {
+export async function getExecutionById(id: string, walletAddress?: string): Promise<StoredExecutionRecord | null> {
   const supabase = createServerClient();
 
   try {
@@ -69,8 +88,11 @@ export async function getExecutionById(id: string, userId?: string): Promise<Sto
       .select("*, agent_verdicts(*)")
       .eq("id", id);
 
-    if (userId) {
-      query = query.eq("user_id", userId);
+    if (walletAddress) {
+      const resolvedId = await resolveUserIdFromWallet(supabase, walletAddress);
+      if (resolvedId) {
+        query = query.eq("user_id", resolvedId);
+      }
     }
 
     const { data, error } = await query.maybeSingle();
@@ -87,19 +109,15 @@ export async function getExecutionById(id: string, userId?: string): Promise<Sto
   }
 }
 
-export async function addExecution(record: StoredExecutionRecord, userId?: string): Promise<void> {
+export async function addExecution(record: StoredExecutionRecord, walletAddress?: string): Promise<void> {
   const supabase = createServerClient();
 
   try {
-    // Verify userId exists in profiles to satisfy FK constraint
+    // Resolve the real profile UUID from the wallet address.
+    // Wallet address is always the reliable identifier — no UUID ambiguity.
     let validUserId: string | null = null;
-    if (userId) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", userId)
-        .maybeSingle();
-      if (profile) validUserId = userId;
+    if (walletAddress) {
+      validUserId = await resolveUserIdFromWallet(supabase, walletAddress);
     }
 
     const executionRow = {
@@ -122,7 +140,6 @@ export async function addExecution(record: StoredExecutionRecord, userId?: strin
 
     if (execError) {
       console.warn("Failed to insert execution into Supabase:", execError.message);
-      // Retry with user_id: null if foreign key constraint failed
       if (execError.message.includes("foreign key constraint")) {
         await supabase.from("executions").upsert({ ...executionRow, user_id: null });
       } else {

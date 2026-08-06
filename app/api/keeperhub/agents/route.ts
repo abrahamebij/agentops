@@ -4,20 +4,28 @@ import { createServerClient } from "@/src/lib/supabase/server";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId") || undefined;
+    const walletAddress = searchParams.get("walletAddress") || undefined;
 
     const supabase = createServerClient();
 
     let query = supabase.from("agent_verdicts").select("agent_name, decision, confidence");
-    if (userId) {
-      // Filter agent verdicts for executions belonging to this user
-      const { data: userExecs } = await supabase
-        .from("executions")
+    if (walletAddress) {
+      // Resolve the real user UUID from wallet_address, then filter verdicts via executions
+      const { data: profile } = await supabase
+        .from("profiles")
         .select("id")
-        .eq("user_id", userId);
-      const userExecIds = (userExecs || []).map((e) => e.id);
-      if (userExecIds.length > 0) {
-        query = query.in("execution_id", userExecIds);
+        .ilike("wallet_address", walletAddress.trim())
+        .maybeSingle();
+
+      if (profile) {
+        const { data: userExecs } = await supabase
+          .from("executions")
+          .select("id")
+          .eq("user_id", profile.id);
+        const userExecIds = (userExecs || []).map((e) => e.id);
+        if (userExecIds.length > 0) {
+          query = query.in("execution_id", userExecIds);
+        }
       }
     }
 

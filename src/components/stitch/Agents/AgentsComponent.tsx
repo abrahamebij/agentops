@@ -27,8 +27,8 @@ export function AgentsComponent() {
     async function loadAgentStats() {
       try {
         const raw = localStorage.getItem("agentops_user_session");
-        const userId = raw ? JSON.parse(raw).userId : undefined;
-        const url = userId ? `/api/keeperhub/agents?userId=${userId}` : "/api/keeperhub/agents";
+        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
+        const url = walletAddress ? `/api/keeperhub/agents?walletAddress=${walletAddress}` : "/api/keeperhub/agents";
         const res = await fetch(url);
         const data = await res.json();
         if (data.agents) {

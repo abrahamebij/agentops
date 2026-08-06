@@ -44,20 +44,29 @@ export interface MultiAgentOrchestrationResult {
   } | null;
 }
 
+// Called at each real pipeline stage transition.
+// Enables callers (e.g. the streaming API route) to emit live status updates
+// without coupling the orchestrator to any transport mechanism.
+export type StageUpdateFn = (stage: string, data?: unknown) => void;
+
 export async function executeMultiAgentFlow(
   triggerDescription: string,
   txDetails: TxDetails,
   customPolicy: Policy = DEFAULT_MVP_POLICY,
-  customPanelResult?: AgentPanelResult
+  customPanelResult?: AgentPanelResult,
+  onStageUpdate?: StageUpdateFn
 ): Promise<MultiAgentOrchestrationResult> {
   // 1. Single Gemini call to get all 3 agent verdicts (or use test override)
   const panelResult = customPanelResult || (await runAgentPanel(triggerDescription));
+  onStageUpdate?.("agents", panelResult);
 
   // 2. Deterministic Consensus Engine check
   const consensusResult = checkConsensus(panelResult, customPolicy.requiredApprovals);
+  onStageUpdate?.("consensus", consensusResult);
 
   // 3. Deterministic Policy Engine check
   const policyResult = checkPolicy(consensusResult, customPolicy, txDetails);
+  onStageUpdate?.("policy", policyResult);
 
   // 4. Gate Evaluation: IF consensus passes AND policy passes
   if (consensusResult.consensus && policyResult.passed) {
@@ -79,6 +88,7 @@ export async function executeMultiAgentFlow(
     };
 
     // Sub-step 1: Simulate
+    onStageUpdate?.("simulating");
     const simulatePayload = {
       chainId: txDetails.chainId,
       recipientAddress: txDetails.recipientAddress,
@@ -97,7 +107,7 @@ export async function executeMultiAgentFlow(
 
     if (simData.wouldRevert || !simData.success) {
       console.warn("⚠️ Simulation reverted:", simData.revertReason || simData.error);
-      return {
+      const result: MultiAgentOrchestrationResult = {
         triggerDescription,
         txDetails,
         policy: customPolicy,
@@ -110,11 +120,14 @@ export async function executeMultiAgentFlow(
           error: simData.revertReason || simData.error || "Simulation reverted",
         },
       };
+      onStageUpdate?.("failed", { error: result.keeperhubResult?.error });
+      return result;
     }
 
     console.log("✅ Simulation Passed! Gas Estimate:", simData.gasEstimate || "21000");
 
     // Sub-step 2: Broadcast with Idempotency Key
+    onStageUpdate?.("broadcasting");
     const idempotencyKey = crypto.randomUUID();
     const broadcastPayload = {
       chainId: txDetails.chainId,
@@ -138,6 +151,7 @@ export async function executeMultiAgentFlow(
     const executionId = broadcastData.executionId || broadcastData.id;
 
     // Sub-step 3: Status Polling
+    onStageUpdate?.("confirming", { executionId });
     let finalStatusData = broadcastData;
     if (executionId) {
       const statusUrl = `${baseUrl}/api/execute/${executionId}/status`;
@@ -152,6 +166,7 @@ export async function executeMultiAgentFlow(
         if (finalStatusData.status === "completed" || finalStatusData.status === "failed") {
           break;
         }
+        onStageUpdate?.("confirming", { executionId, attempt: attempts });
         await new Promise((r) => setTimeout(r, Math.max(pollIntervalMs, 2000)));
       }
     }
@@ -169,6 +184,19 @@ export async function executeMultiAgentFlow(
       replayRes.status === 200 ||
       replayRes.status === 202;
 
+    const keeperhubResult = {
+      simulationPassed: true,
+      idempotencyKey,
+      executionId,
+      transactionHash: finalStatusData.transactionHash,
+      transactionLink: finalStatusData.transactionLink,
+      gasUsedWei: finalStatusData.gasUsedWei,
+      status: finalStatusData.status,
+      replayVerified: isIdempotentMatch,
+    };
+
+    onStageUpdate?.("confirmed", keeperhubResult);
+
     return {
       triggerDescription,
       txDetails,
@@ -177,16 +205,7 @@ export async function executeMultiAgentFlow(
       consensusResult,
       policyResult,
       executed: true,
-      keeperhubResult: {
-        simulationPassed: true,
-        idempotencyKey,
-        executionId,
-        transactionHash: finalStatusData.transactionHash,
-        transactionLink: finalStatusData.transactionLink,
-        gasUsedWei: finalStatusData.gasUsedWei,
-        status: finalStatusData.status,
-        replayVerified: isIdempotentMatch,
-      },
+      keeperhubResult,
     };
   } else {
     // REJECTION PATH: 0 KeeperHub API calls!
@@ -197,6 +216,8 @@ export async function executeMultiAgentFlow(
     console.log("Policy Passed:", policyResult.passed);
     console.log("Policy Reasons:", policyResult.reasons);
     console.log("Zero network calls made to KeeperHub API.");
+
+    onStageUpdate?.("rejected", { consensusResult, policyResult });
 
     return {
       triggerDescription,

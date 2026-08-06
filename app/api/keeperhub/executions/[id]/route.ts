@@ -8,9 +8,9 @@ export async function GET(
   try {
     const resolvedParams = await params;
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId") || undefined;
+    const walletAddress = searchParams.get("walletAddress") || undefined;
 
-    const record = await getExecutionById(resolvedParams.id, userId);
+    const record = await getExecutionById(resolvedParams.id, walletAddress);
     if (!record) {
       return NextResponse.json({ error: "Execution record not found" }, { status: 404 });
     }

@@ -29,8 +29,8 @@ export function DashboardConsole() {
     async function loadExecutions() {
       try {
         const raw = localStorage.getItem("agentops_user_session");
-        const userId = raw ? JSON.parse(raw).userId : undefined;
-        const url = userId ? `/api/keeperhub/multi-agent-execution?userId=${userId}` : "/api/keeperhub/multi-agent-execution";
+        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
+        const url = walletAddress ? `/api/keeperhub/multi-agent-execution?walletAddress=${walletAddress}` : "/api/keeperhub/multi-agent-execution";
         const res = await fetch(url);
         const data = await res.json();
         if (data.executions && Array.isArray(data.executions)) {
@@ -70,8 +70,8 @@ export function DashboardConsole() {
     async function loadActivePolicies() {
       try {
         const raw = localStorage.getItem("agentops_user_session");
-        const userId = raw ? JSON.parse(raw).userId : undefined;
-        const url = userId ? `/api/keeperhub/policy?userId=${userId}` : "/api/keeperhub/policy";
+        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
+        const url = walletAddress ? `/api/keeperhub/policy?walletAddress=${walletAddress}` : "/api/keeperhub/policy";
         const res = await fetch(url);
         const data = await res.json();
         // getUserPolicy always returns exactly 1 policy row per user (auto-seeded).
@@ -86,8 +86,8 @@ export function DashboardConsole() {
     async function loadActiveAgents() {
       try {
         const raw = localStorage.getItem("agentops_user_session");
-        const userId = raw ? JSON.parse(raw).userId : undefined;
-        const url = userId ? `/api/keeperhub/agents?userId=${userId}` : "/api/keeperhub/agents";
+        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
+        const url = walletAddress ? `/api/keeperhub/agents?walletAddress=${walletAddress}` : "/api/keeperhub/agents";
         const res = await fetch(url);
         const data = await res.json();
         // The agents endpoint always returns a fixed object with keys: analyst, security, risk.
