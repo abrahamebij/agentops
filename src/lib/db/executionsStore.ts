@@ -32,6 +32,10 @@ export interface StoredExecutionRecord {
   consensusResult: ConsensusResult;
   policyResult: PolicyResult;
   keeperhubResult: KeeperHubExecutionResult | null;
+  /** True when Gemini reasoned with live KeeperHub MCP tool access */
+  mcpGrounded?: boolean;
+  /** MCP tools actually called during agent reasoning */
+  mcpToolsUsed?: string[];
 }
 
 // Resolves the real Supabase profile UUID from a wallet address.

@@ -167,6 +167,10 @@ interface LiveState {
   txLink?: string;
   error?: string;
   storedRecord?: ExecutionRecord;
+  /** True when agents reasoned with live KeeperHub MCP tool access */
+  mcpGrounded?: boolean;
+  /** MCP tool names actually called during agent reasoning */
+  mcpToolsUsed?: string[];
 }
 
 export function ExecutionsList() {
@@ -353,8 +357,20 @@ export function ExecutionsList() {
             const { stage, data } = JSON.parse(line.slice(6));
 
             if (stage === "agents" && data) {
-              scheduleAgentReveal(data as { analyst: AgentResult; security: AgentResult; risk: AgentResult });
-              setLiveState((prev) => ({ ...prev, stage: "agents" }));
+              const panel = data as {
+                analyst: AgentResult;
+                security: AgentResult;
+                risk: AgentResult;
+                mcpGrounded?: boolean;
+                mcpToolsUsed?: string[];
+              };
+              scheduleAgentReveal(panel);
+              setLiveState((prev) => ({
+                ...prev,
+                stage: "agents",
+                mcpGrounded: panel.mcpGrounded ?? false,
+                mcpToolsUsed: panel.mcpToolsUsed ?? [],
+              }));
             } else if (stage === "consensus" && data) {
               setLiveState((prev) => ({
                 ...prev,
@@ -696,9 +712,20 @@ export function ExecutionsList() {
 
                   {/* Agent Cards */}
                   <div className="flex flex-col gap-3">
-                    <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider text-[11px]">
-                      Agent Panel
-                    </span>
+                    <div className="flex items-center gap-2">
+                       <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider text-[11px]">
+                         Agent Panel
+                       </span>
+                       {liveState.mcpGrounded && (
+                         <span className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/30 rounded text-primary font-mono-data text-[9px] uppercase tracking-wider">
+                           <MdHub className="text-[10px]" />
+                           KeeperHub MCP
+                           {liveState.mcpToolsUsed && liveState.mcpToolsUsed.length > 0 && (
+                             <span className="opacity-70 ml-0.5">· {liveState.mcpToolsUsed.join(", ")}</span>
+                           )}
+                         </span>
+                       )}
+                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {(["analyst", "security", "risk"] as const).map((agent) => {
                         const icons = { analyst: MdAnalytics, security: MdShield, risk: MdScale };

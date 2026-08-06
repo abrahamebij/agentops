@@ -101,7 +101,10 @@ export async function POST(req: Request) {
           consensusResult: result.consensusResult,
           policyResult: result.policyResult,
           keeperhubResult: result.keeperhubResult,
+          mcpGrounded: result.panelResult.mcpGrounded ?? false,
+          mcpToolsUsed: result.panelResult.mcpToolsUsed ?? [],
         };
+
 
         // Persist to Supabase
         await addExecution(newRecord, walletAddress);
