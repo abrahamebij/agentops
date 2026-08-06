@@ -164,7 +164,13 @@ export function AuditTrail() {
                   <span className="font-label-caps text-label-caps text-primary tracking-widest uppercase">
                     Execution T-84920 (Sepolia Testnet)
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary-container font-mono-data text-[10px] tracking-wide uppercase font-semibold">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full font-mono-data text-[10px] tracking-wide uppercase font-semibold ${
+                      executionData?.executed === false
+                        ? "bg-error/20 text-error border border-error/40"
+                        : "bg-primary-container text-on-primary-container"
+                    }`}
+                  >
                     {executionData ? (executionData.executed ? "CONFIRMED" : "REJECTED") : "LIVE DAEMON"}
                   </span>
                 </div>
