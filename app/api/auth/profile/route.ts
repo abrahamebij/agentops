@@ -20,7 +20,7 @@ export async function getOrCreateProfileId(
     let shouldUpdate = false;
     const updates: Record<string, string> = { updated_at: new Date().toISOString() };
 
-    if (fullName && fullName !== existingProfile.full_name && fullName !== "Operator") {
+    if (fullName) {
       updates.full_name = fullName;
       existingProfile.full_name = fullName;
       shouldUpdate = true;
@@ -136,8 +136,15 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     if (profile) {
+      // User is only considered fully onboarded if they have set a custom non-default name
+      const isOnboarded = Boolean(
+        profile.full_name &&
+        profile.full_name.trim() !== "" &&
+        profile.full_name !== "Operator"
+      );
+
       return NextResponse.json({
-        exists: true,
+        exists: isOnboarded,
         profile: {
           userId: profile.id,
           walletAddress: profile.wallet_address,
