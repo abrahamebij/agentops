@@ -57,7 +57,7 @@ export async function executeMultiAgentFlow(
   onStageUpdate?: StageUpdateFn
 ): Promise<MultiAgentOrchestrationResult> {
   // 1. Single Gemini call to get all 3 agent verdicts (or use test override)
-  const panelResult = customPanelResult || (await runAgentPanel(triggerDescription));
+  const panelResult = customPanelResult || (await runAgentPanel(triggerDescription, txDetails));
   onStageUpdate?.("agents", panelResult);
 
   // 2. Deterministic Consensus Engine check

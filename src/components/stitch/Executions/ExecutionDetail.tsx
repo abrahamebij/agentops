@@ -189,7 +189,13 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                   <span className="font-label-caps text-label-caps text-primary tracking-widest uppercase">
                     Execution {executionId} (Sepolia Testnet)
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary-container font-mono-data text-[10px] tracking-wide uppercase font-semibold">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full font-mono-data text-[10px] tracking-wide uppercase font-semibold ${
+                      executionData?.executed === false
+                        ? "bg-error/20 text-error border border-error/40"
+                        : "bg-primary-container text-on-primary-container"
+                    }`}
+                  >
                     {executionData ? (executionData.executed ? "CONFIRMED" : "REJECTED") : "CONFIRMED"}
                   </span>
                 </div>
@@ -219,7 +225,7 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                 </h2>
                 <div className="flex items-center gap-3 bg-surface-container px-3 py-1.5 rounded border border-outline-variant/30 font-mono-data text-[11px] text-on-surface-variant">
                   <span>Consensus Gate:</span>
-                  <span className="text-primary font-bold">
+                  <span className={executionData?.executed === false ? "text-error font-bold" : "text-primary font-bold"}>
                     {executionData ? `${executionData.consensusResult.approvalCount}/3 Approved` : "3/3 Approved"}
                   </span>
                 </div>
@@ -432,7 +438,7 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                     Chain: Sepolia (11155111)
                   </span>
                   <span className="font-mono-data text-[12px] text-on-surface-variant bg-surface-container px-3 py-1 rounded shadow-sm border border-outline-variant/30">
-                    Gas Used: 21,227 Wei
+                    Gas Used: {executionData?.executed ? "21,227 Wei" : "0 Wei (Skipped)"}
                   </span>
                 </div>
               </div>
@@ -444,9 +450,9 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                   {/* Step 1: Simulate */}
                   <div className="flex items-start gap-6 relative z-10">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      executorStep === "simulating" || executorStep === "broadcasting" || executorStep === "confirmed" || executorStep === "idle"
+                      executionData?.executed
                         ? "bg-primary"
-                        : "bg-surface-variant"
+                        : "bg-error/30 text-error"
                     }`}>
                       <MdCheck className="text-[14px] text-on-primary" />
                     </div>
@@ -463,7 +469,9 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                         Simulates transfer on Sepolia fork before broadcasting.
                       </p>
                       <div className="bg-surface p-3 rounded font-mono-data text-[11px] text-on-surface opacity-70 border border-outline-variant/20">
-                        [simulate] POST /api/execute/transfer (simulate: true) -&gt; Gas estimate: 21,227. Success!
+                        {executionData?.executed
+                          ? "[simulate] POST /api/execute/transfer (simulate: true) -> Gas estimate: 21,227. Success!"
+                          : "[simulate] Pipeline stopped before simulation — execution rejected by multi-agent consensus or policy gate."}
                       </div>
                     </div>
                   </div>
@@ -471,9 +479,9 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                   {/* Step 2: Broadcast */}
                   <div className="flex items-start gap-6 relative z-10">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      executorStep === "broadcasting" || executorStep === "confirmed" || executorStep === "idle"
+                      executionData?.executed
                         ? "bg-primary"
-                        : "bg-surface-variant"
+                        : "bg-surface-variant opacity-40"
                     }`}>
                       <MdCheck className="text-[14px] text-on-primary" />
                     </div>
@@ -495,40 +503,52 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
                   {/* Step 3: Onchain Confirmation */}
                   <div className="flex items-start gap-6 relative z-10">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      executorStep === "confirmed" || executorStep === "idle"
+                      executionData?.executed
                         ? "bg-primary shadow-[0_0_12px_rgba(174,198,255,0.4)]"
-                        : "bg-surface-variant"
+                        : "bg-error/20 text-error border border-error/40"
                     }`}>
-                      <MdDoneAll className="text-[14px] text-on-primary" />
+                      {executionData?.executed ? <MdDoneAll className="text-[14px] text-on-primary" /> : <MdCheck className="text-[14px] text-error" />}
                     </div>
                     <div className="flex flex-col w-full">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-headline-md text-body-base font-semibold text-on-surface">
                           3. Onchain Confirmation &amp; Etherscan Proof
                         </span>
-                        <span className="font-mono-data text-label-caps text-primary font-bold">
-                          CONFIRMED ON SEPOLIA
+                        <span className={`font-mono-data text-label-caps font-bold ${executionData?.executed ? "text-primary" : "text-error"}`}>
+                          {executionData?.executed ? "CONFIRMED ON SEPOLIA" : "REJECTED (NO BROADCAST)"}
                         </span>
                       </div>
                       <p className="font-body-base text-body-base text-on-surface-variant mb-4">
-                        Verified and confirmed transaction hash recorded on Ethereum Sepolia testnet.
+                        {executionData?.executed
+                          ? "Verified and confirmed transaction hash recorded on Ethereum Sepolia testnet."
+                          : "Transaction was rejected during safety evaluation. No transaction was broadcast to Ethereum Sepolia."}
                       </p>
                       <div className="flex items-center justify-between bg-surface p-4 rounded shadow-inner border border-outline-variant/20">
                         <div className="flex items-center gap-3">
                           <MdTag className="text-outline-variant text-xl" />
                           <span className="font-mono-data text-mono-data text-on-surface truncate max-w-[200px] sm:max-w-md">
-                            {txHash}
+                            {txHash || "NO ONCHAIN TRANSACTION"}
                           </span>
                         </div>
-                        <a
-                          href={txLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="bg-primary hover:bg-primary/90 text-on-primary px-4 py-2 rounded font-label-caps text-label-caps transition-colors flex items-center gap-2 shrink-0"
-                        >
-                          ETHERSCAN
-                          <MdOpenInNew className="text-[14px]" />
-                        </a>
+                        {executionData?.executed && txLink ? (
+                          <a
+                            href={txLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="bg-primary hover:bg-primary/90 text-on-primary px-4 py-2 rounded font-label-caps text-label-caps transition-colors flex items-center gap-2 shrink-0"
+                          >
+                            ETHERSCAN
+                            <MdOpenInNew className="text-[14px]" />
+                          </a>
+                        ) : (
+                          <button
+                            disabled
+                            className="bg-surface-container-highest border border-outline-variant/30 text-on-surface-variant/40 px-4 py-2 rounded font-label-caps text-label-caps cursor-not-allowed flex items-center gap-2 shrink-0 opacity-50"
+                          >
+                            ETHERSCAN
+                            <MdOpenInNew className="text-[14px]" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

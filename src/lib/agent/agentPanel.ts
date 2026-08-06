@@ -255,9 +255,19 @@ async function runGeminiWithMcp(
  * Falls back to plain Gemini (no tools) if MCP is unavailable, and falls
  * further back to the deterministic panel engine if Gemini itself fails.
  */
-export async function runAgentPanel(triggerDescription: string): Promise<AgentPanelResult> {
+export async function runAgentPanel(
+  triggerDescription: string,
+  txDetails?: { recipientAddress?: string; amountEth?: string; chainId?: number }
+): Promise<AgentPanelResult> {
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const keeperApiKey = process.env.KEEPERHUB_API_KEY;
+
+  let fullPromptMessage = `Trigger Scenario: "${triggerDescription}"`;
+  if (txDetails) {
+    const amountVal = txDetails.amountEth || "0";
+    const amountUsd = (parseFloat(amountVal) * 3000).toFixed(2);
+    fullPromptMessage += `\nTransaction Details:\n- Recipient Address: ${txDetails.recipientAddress || "Unspecified"}\n- Amount: ${amountVal} ETH (~$${amountUsd} USD)\n- Chain ID: ${txDetails.chainId || 11155111}`;
+  }
 
   // ── Attempt 1: Gemini + KeeperHub MCP tool access ─────────────────────────
   if (geminiKey && keeperApiKey) {
@@ -275,7 +285,7 @@ export async function runAgentPanel(triggerDescription: string): Promise<AgentPa
 
       const { text, toolsUsed } = await runGeminiWithMcp(
         MCP_AUGMENTED_PROMPT,
-        triggerDescription,
+        fullPromptMessage,
         geminiKey,
         functionDeclarations,
         keeperApiKey,
@@ -308,7 +318,7 @@ export async function runAgentPanel(triggerDescription: string): Promise<AgentPa
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `${BASE_SYSTEM_PROMPT}\n\nAnalyze trigger: "${triggerDescription}"` }] }],
+          contents: [{ parts: [{ text: `${BASE_SYSTEM_PROMPT}\n\nAnalyze trigger:\n${fullPromptMessage}` }] }],
           generationConfig: {
             responseMimeType: "application/json",
             temperature: 0.1,

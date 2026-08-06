@@ -600,8 +600,8 @@ export function ExecutionsList() {
 
       {/* ── Modal Overlay ───────────────────────────────────────────────────── */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-surface-container w-full max-w-xl rounded-2xl border border-outline-variant/40 shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-6">
+          <div className="bg-surface-container w-full max-w-5xl rounded-2xl border border-outline-variant/40 shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
               <div>
@@ -722,7 +722,7 @@ export function ExecutionsList() {
                          </span>
                        )}
                      </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {(["analyst", "security", "risk"] as const).map((agent) => {
                         const icons = { analyst: MdAnalytics, security: MdShield, risk: MdScale };
                         return (
