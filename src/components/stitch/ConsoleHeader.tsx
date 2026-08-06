@@ -37,8 +37,9 @@ export function ConsoleHeader() {
   }, []);
 
   const { data: profile, isLoading } = useProfile(walletAddress);
-
+  
   useEffect(() => {
+    console.log('profile: ', profile);
     if (profile) {
       const liveProfile = {
         fullName: profile.fullName || "",

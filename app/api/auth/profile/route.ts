@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/src/lib/supabase/server";
 
+export function getDefaultAvatarUrl(walletAddress: string, name?: string): string {
+  const seed = walletAddress.trim().toLowerCase();
+  return `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
+}
+
 export async function getOrCreateProfileId(
   supabase: ReturnType<typeof createServerClient>,
   walletAddress: string,
@@ -8,6 +13,7 @@ export async function getOrCreateProfileId(
   avatarUrl?: string
 ): Promise<{ userId: string; profile: { id: string; wallet_address: string; full_name: string; avatar_url: string; role: string } }> {
   const cleanAddress = walletAddress.trim();
+  const defaultAvatar = getDefaultAvatarUrl(cleanAddress, fullName);
 
   // 1. Check existing profile in public.profiles
   const { data: existingProfile } = await supabase
@@ -25,9 +31,11 @@ export async function getOrCreateProfileId(
       existingProfile.full_name = fullName;
       shouldUpdate = true;
     }
-    if (avatarUrl && avatarUrl !== existingProfile.avatar_url) {
-      updates.avatar_url = avatarUrl;
-      existingProfile.avatar_url = avatarUrl;
+
+    const targetAvatar = avatarUrl || existingProfile.avatar_url || defaultAvatar;
+    if (targetAvatar !== existingProfile.avatar_url) {
+      updates.avatar_url = targetAvatar;
+      existingProfile.avatar_url = targetAvatar;
       shouldUpdate = true;
     }
 
@@ -41,7 +49,7 @@ export async function getOrCreateProfileId(
         id: existingProfile.id,
         wallet_address: existingProfile.wallet_address,
         full_name: existingProfile.full_name || fullName || "Operator",
-        avatar_url: existingProfile.avatar_url || avatarUrl || "",
+        avatar_url: existingProfile.avatar_url || targetAvatar,
         role: existingProfile.role || "Operator",
       },
     };
@@ -51,6 +59,7 @@ export async function getOrCreateProfileId(
   const dummyEmail = `${cleanAddress.toLowerCase()}@agentops.io`;
   const dummyPassword = `Pass_${cleanAddress.slice(0, 10)}`;
   const finalName = fullName || "Operator";
+  const finalAvatar = avatarUrl || defaultAvatar;
   let userId = "";
 
   const { data: createData, error: createError } = await supabase.auth.admin.createUser({
@@ -95,7 +104,7 @@ export async function getOrCreateProfileId(
     id: userId,
     wallet_address: cleanAddress,
     full_name: finalName,
-    avatar_url: avatarUrl || "",
+    avatar_url: finalAvatar,
     updated_at: new Date().toISOString(),
   };
 
@@ -112,7 +121,7 @@ export async function getOrCreateProfileId(
       id: userId,
       wallet_address: cleanAddress,
       full_name: finalName,
-      avatar_url: avatarUrl || "",
+      avatar_url: finalAvatar,
       role: "Operator",
     },
   };
@@ -136,12 +145,13 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     if (profile) {
-      // User is only considered fully onboarded if they have set a custom non-default name
       const isOnboarded = Boolean(
         profile.full_name &&
         profile.full_name.trim() !== "" &&
         profile.full_name !== "Operator"
       );
+
+      const avatarUrl = profile.avatar_url || getDefaultAvatarUrl(profile.wallet_address, profile.full_name);
 
       return NextResponse.json({
         exists: isOnboarded,
@@ -149,7 +159,7 @@ export async function GET(req: Request) {
           userId: profile.id,
           walletAddress: profile.wallet_address,
           fullName: profile.full_name,
-          avatarUrl: profile.avatar_url || "",
+          avatarUrl,
           role: profile.role || "Operator",
         },
       });
@@ -221,7 +231,7 @@ export async function POST(req: Request) {
       userId: result.userId,
       walletAddress: result.profile.wallet_address,
       fullName: result.profile.full_name,
-      avatarUrl: result.profile.avatar_url,
+      avatarUrl: result.profile.avatar_url || getDefaultAvatarUrl(walletAddress, result.profile.full_name),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Profile setup failed";

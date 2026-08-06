@@ -85,11 +85,12 @@ async function resolveUserIdFromWallet(
     }
 
     if (userId) {
+      const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanAddress.toLowerCase()}`;
       const { error: profileErr } = await supabase.from("profiles").upsert({
         id: userId,
         wallet_address: cleanAddress,
         full_name: "Operator",
-        avatar_url: "",
+        avatar_url: defaultAvatar,
         updated_at: new Date().toISOString(),
       });
       if (!profileErr) {
