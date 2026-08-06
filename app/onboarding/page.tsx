@@ -188,7 +188,7 @@ export default function OnboardingPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.svg,image/svg+xml"
               onChange={handleAvatarChange}
               className="hidden"
             />

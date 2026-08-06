@@ -184,13 +184,24 @@ export async function POST(req: Request) {
     const supabase = createServerClient();
     let finalAvatarUrl = avatarUrl || "";
 
-    // 1. Upload base64 image if provided
+    // 1. Upload base64 image if provided (supports PNG, JPEG, SVG, WebP, GIF)
     if (avatarBase64 && avatarBase64.startsWith("data:image")) {
       try {
-        const matches = avatarBase64.match(/^data:(image\/(\w+));base64,(.+)$/);
+        const matches = avatarBase64.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);(?:charset=[^;]+;)?base64,(.+)$/);
         if (matches) {
-          const ext = matches[2] || "png";
-          const buffer = Buffer.from(matches[3], "base64");
+          const contentType = matches[1];
+          let ext = "png";
+          if (contentType.includes("svg")) {
+            ext = "svg";
+          } else if (contentType.includes("jpeg") || contentType.includes("jpg")) {
+            ext = "jpg";
+          } else if (contentType.includes("webp")) {
+            ext = "webp";
+          } else if (contentType.includes("gif")) {
+            ext = "gif";
+          }
+
+          const buffer = Buffer.from(matches[2], "base64");
           const fileName = `${walletAddress.slice(0, 8)}-${Date.now()}.${ext}`;
 
           await supabase.storage.createBucket("avatars", { public: true }).catch(() => {});
@@ -198,7 +209,7 @@ export async function POST(req: Request) {
           const { error: uploadErr } = await supabase.storage
             .from("avatars")
             .upload(fileName, buffer, {
-              contentType: matches[1],
+              contentType,
               upsert: true,
             });
 
@@ -210,11 +221,16 @@ export async function POST(req: Request) {
               finalAvatarUrl = publicData.publicUrl;
             }
           } else {
-            console.warn("Storage upload error:", uploadErr.message);
+            console.warn("Storage upload error, using data URL fallback:", uploadErr.message);
+            finalAvatarUrl = avatarBase64;
           }
+        } else {
+          // If regex doesn't split, fallback to raw base64 data URL
+          finalAvatarUrl = avatarBase64;
         }
       } catch (err) {
         console.warn("Server avatar processing notice:", err);
+        finalAvatarUrl = avatarBase64;
       }
     }
 
