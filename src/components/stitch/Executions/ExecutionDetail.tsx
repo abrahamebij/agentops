@@ -61,7 +61,25 @@ interface MultiAgentExecutionData {
   } | null;
 }
 
+import { useExecutionDetail } from "@/src/hooks/useExecutions";
+
 export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: string }) {
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("agentops_user_session");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        setWalletAddress(parsed.walletAddress || undefined);
+      } catch {
+        // Ignore invalid session JSON
+      }
+    }
+  }, []);
+
+  const { data: rec } = useExecutionDetail(executionId, walletAddress);
+
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [revealedAgents, setRevealedAgents] = useState<{
     analyst: boolean;
@@ -72,38 +90,29 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
   const [executorStep, setExecutorStep] = useState<"idle" | "simulating" | "broadcasting" | "confirmed" | "failed">("idle");
 
   useEffect(() => {
-    async function loadRecord() {
-      try {
-        const res = await fetch(`/api/keeperhub/executions/${executionId}`);
-        const data = await res.json();
-        if (data.execution) {
-          const rec = data.execution;
-          setExecutionData({
-            triggerDescription: rec.triggerDescription,
-            txDetails: {
-              chainId: 11155111,
-              recipientAddress: rec.recipientAddress,
-              amountEth: rec.amountEth,
-              actionType: "transfer",
-            },
-            panelResult: rec.panelResult,
-            consensusResult: rec.consensusResult,
-            policyResult: rec.policyResult,
-            executed: rec.executed,
-            keeperhubResult: rec.keeperhubResult,
-          });
-          if (rec.executed) {
-            setExecutorStep("confirmed");
-          } else {
-            setExecutorStep("failed");
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load execution detail:", err);
+    if (rec) {
+      setExecutionData({
+        triggerDescription: rec.triggerDescription,
+        txDetails: {
+          chainId: 11155111,
+          recipientAddress: rec.recipientAddress,
+          amountEth: rec.amountEth,
+          actionType: "transfer",
+        },
+        panelResult: rec.panelResult,
+        consensusResult: rec.consensusResult,
+        policyResult: rec.policyResult,
+        executed: rec.executed,
+        keeperhubResult: rec.keeperhubResult,
+      });
+      if (rec.executed) {
+        setExecutorStep("confirmed");
+      } else {
+        setExecutorStep("failed");
       }
     }
-    loadRecord();
-  }, [executionId]);
+  }, [rec]);
+
 
   const triggerLiveExecution = async () => {
     setIsRunning(true);

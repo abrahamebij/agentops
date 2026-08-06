@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import { MdAccountTree } from "react-icons/md";
+import { useAgentStats } from "@/src/hooks/useAgents";
 
 interface AgentStats {
   approvalRate: string;
@@ -13,33 +14,27 @@ interface AgentStats {
 }
 
 export function AgentsComponent() {
-  const [stats, setStats] = useState<{
-    analyst: AgentStats;
-    security: AgentStats;
-    risk: AgentStats;
-  }>({
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("agentops_user_session");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        setWalletAddress(parsed.walletAddress || undefined);
+      } catch {
+        // Ignore invalid session JSON
+      }
+    }
+  }, []);
+
+  const { data: fetchedStats } = useAgentStats(walletAddress);
+
+  const stats = fetchedStats || {
     analyst: { approvalRate: "100.0%", totalExecutions: 0, latencyMs: 89, version: "v4.2.1-epsilon" },
     security: { approvalRate: "100.0%", totalExecutions: 0, latencyMs: 142, version: "v2.9.0-delta" },
     risk: { approvalRate: "100.0%", totalExecutions: 0, latencyMs: 64, version: "v3.1.5-gamma" },
-  });
-
-  useEffect(() => {
-    async function loadAgentStats() {
-      try {
-        const raw = localStorage.getItem("agentops_user_session");
-        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
-        const url = walletAddress ? `/api/keeperhub/agents?walletAddress=${walletAddress}` : "/api/keeperhub/agents";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.agents) {
-          setStats(data.agents);
-        }
-      } catch (err) {
-        console.error("Failed to load agent statistics from database:", err);
-      }
-    }
-    loadAgentStats();
-  }, []);
+  };
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex">

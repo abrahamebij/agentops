@@ -1,63 +1,66 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { MdSearch, MdNotifications } from "react-icons/md";
+import { useProfile } from "@/src/hooks/useProfile";
+
+interface UserSession {
+  fullName: string;
+  avatarUrl: string;
+  walletAddress: string;
+}
 
 export function ConsoleHeader() {
-  const [userSession, setUserSession] = useState<{
-    fullName: string;
-    avatarUrl: string;
-    walletAddress: string;
-  } | null>(null);
+  const router = useRouter();
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [imageError, setImageError] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    async function fetchLiveProfile() {
-      const raw = localStorage.getItem("agentops_user_session");
-      if (!raw) {
-        setLoading(false);
-        return;
-      }
-
+    const raw = localStorage.getItem("agentops_user_session");
+    if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        // Set local session immediately so UI isn't blank
-        setUserSession({
-          fullName: parsed.fullName || "",
-          avatarUrl: parsed.avatarUrl || "",
-          walletAddress: parsed.walletAddress || "",
-        });
-
-        // Then fetch live profile from Supabase DB to get the real data
         if (parsed.walletAddress) {
-          const res = await fetch(`/api/auth/profile?walletAddress=${parsed.walletAddress}`);
-          const data = await res.json();
-          if (data.exists && data.profile) {
-            const liveProfile = {
-              fullName: data.profile.fullName || parsed.fullName || "",
-              avatarUrl: data.profile.avatarUrl || parsed.avatarUrl || "",
-              walletAddress: data.profile.walletAddress || parsed.walletAddress,
-            };
-            setUserSession(liveProfile);
-
-            // Keep localStorage in sync with live data
-            const existing = JSON.parse(raw);
-            localStorage.setItem(
-              "agentops_user_session",
-              JSON.stringify({ ...existing, ...liveProfile })
-            );
-          }
+          setWalletAddress(parsed.walletAddress);
+          setUserSession({
+            fullName: parsed.fullName || "",
+            avatarUrl: parsed.avatarUrl || "",
+            walletAddress: parsed.walletAddress || "",
+          });
         }
-      } catch (err) {
-        console.error("Failed to fetch live profile in ConsoleHeader:", err);
-      } finally {
-        setLoading(false);
+      } catch {
+        // Ignore invalid session JSON
       }
     }
-
-    fetchLiveProfile();
   }, []);
+
+  const { data: profile, isLoading } = useProfile(walletAddress);
+
+  useEffect(() => {
+    if (profile) {
+      const liveProfile = {
+        fullName: profile.fullName || "",
+        avatarUrl: profile.avatarUrl || "",
+        walletAddress: profile.walletAddress || walletAddress || "",
+      };
+      setUserSession(liveProfile);
+
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          const existing = JSON.parse(raw);
+          localStorage.setItem(
+            "agentops_user_session",
+            JSON.stringify({ ...existing, ...liveProfile })
+          );
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }, [profile, walletAddress]);
 
   const displayName = userSession?.fullName || "";
   const displayAddress = userSession?.walletAddress
@@ -82,7 +85,7 @@ export function ConsoleHeader() {
         <MdNotifications className="text-on-surface-variant text-xl cursor-pointer hover:text-on-surface transition-colors" />
 
         {/* Loading skeleton */}
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center gap-3 bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant/30 animate-pulse">
             <div className="w-7 h-7 rounded-full bg-surface-container-high shrink-0" />
             <div className="flex flex-col gap-1.5">

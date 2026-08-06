@@ -5,6 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { OnboardingModal } from "./Auth/OnboardingModal";
 import { MdMenu, MdClose } from "react-icons/md";
+import { useProfile } from "@/src/hooks/useProfile";
+
+interface UserSession {
+  fullName?: string;
+  avatarUrl?: string;
+  walletAddress?: string;
+  isAuthenticated?: boolean;
+}
 
 export function PublicHeader() {
   const pathname = usePathname();
@@ -12,44 +20,38 @@ export function PublicHeader() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [imageError, setImageError] = useState<boolean>(false);
-  const [userSession, setUserSession] = useState<{
-    fullName: string;
-    avatarUrl: string;
-    walletAddress: string;
-    isAuthenticated: boolean;
-  } | null>(null);
-
-  const loadLiveSession = async () => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (!raw) return;
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed.isAuthenticated) {
-        setUserSession(parsed);
-
-        // Fetch live from DB by wallet address
-        if (parsed.walletAddress) {
-          const res = await fetch(`/api/auth/profile?walletAddress=${parsed.walletAddress}`);
-          const data = await res.json();
-          if (data.exists && data.profile) {
-            setUserSession({
-              fullName: data.profile.fullName || parsed.fullName || "",
-              avatarUrl: data.profile.avatarUrl || parsed.avatarUrl || "",
-              walletAddress: data.profile.walletAddress || parsed.walletAddress,
-              isAuthenticated: true,
-            });
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Session parse error:", err);
-    }
-  };
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
 
   useEffect(() => {
-    loadLiveSession();
+    const raw = localStorage.getItem("agentops_user_session");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.isAuthenticated && parsed.walletAddress) {
+          setWalletAddress(parsed.walletAddress);
+          setUserSession(parsed);
+        }
+      } catch {
+        // Ignore invalid session JSON
+      }
+    }
+  }, []);
 
+  const { data: profile } = useProfile(walletAddress);
+
+  useEffect(() => {
+    if (profile) {
+      setUserSession({
+        fullName: profile.fullName || userSession?.fullName || "",
+        avatarUrl: profile.avatarUrl || userSession?.avatarUrl || "",
+        walletAddress: profile.walletAddress || walletAddress || "",
+        isAuthenticated: true,
+      });
+    }
+  }, [profile, walletAddress]);
+
+  useEffect(() => {
     const handleOpenOnboarding = () => setIsModalOpen(true);
     window.addEventListener("open-onboarding", handleOpenOnboarding);
     return () => window.removeEventListener("open-onboarding", handleOpenOnboarding);
@@ -190,7 +192,15 @@ export function PublicHeader() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
-          loadLiveSession();
+          const raw = localStorage.getItem("agentops_user_session");
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed.walletAddress) setWalletAddress(parsed.walletAddress);
+            } catch {
+              // ignore
+            }
+          }
         }}
       />
     </>

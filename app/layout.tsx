@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ReactQueryProvider } from "@/src/lib/providers/ReactQueryProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,10 +30,10 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
     >
-
       <body className="min-h-full bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container">
-        {children}
+        <ReactQueryProvider>{children}</ReactQueryProvider>
       </body>
     </html>
   );
 }
+

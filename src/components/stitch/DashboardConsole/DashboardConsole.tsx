@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import { MdFilterList, MdCheckCircle, MdError, MdTag } from "react-icons/md";
+import { useExecutions } from "@/src/hooks/useExecutions";
+import { usePolicy } from "@/src/hooks/usePolicy";
+import { useAgentStats } from "@/src/hooks/useAgents";
 
 interface ExecutionRecord {
   id: string;
@@ -19,94 +22,42 @@ interface ExecutionRecord {
 }
 
 export function DashboardConsole() {
-  const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const [successRate, setSuccessRate] = useState<string>("100.0%");
-  const [activePolicies, setActivePolicies] = useState<number | null>(null);
-  const [activeAgents, setActiveAgents] = useState<number | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    async function loadExecutions() {
+    const raw = localStorage.getItem("agentops_user_session");
+    if (raw) {
       try {
-        const raw = localStorage.getItem("agentops_user_session");
-        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
-        const url = walletAddress ? `/api/keeperhub/multi-agent-execution?walletAddress=${walletAddress}` : "/api/keeperhub/multi-agent-execution";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.executions && Array.isArray(data.executions)) {
-          const records: ExecutionRecord[] = data.executions.map((e: {
-            id: string;
-            triggerDescription: string;
-            status: "confirmed" | "rejected" | "running";
-            decision: "EXECUTE" | "REJECT";
-            amountEth: string;
-            amountUsd: string;
-            timestamp: string;
-            keeperhubResult?: { transactionHash?: string; transactionLink?: string };
-          }) => ({
-            id: e.id,
-            triggerDescription: e.triggerDescription,
-            status: e.status,
-            decision: e.decision,
-            amountEth: e.amountEth,
-            amountUsd: e.amountUsd,
-            timestamp: e.timestamp,
-            txHash: e.keeperhubResult?.transactionHash,
-            txLink: e.keeperhubResult?.transactionLink,
-          }));
-
-          setExecutions(records);
-          setTotalCount(records.length);
-
-          const confirmed = records.filter((r) => r.status === "confirmed").length;
-          const rate = records.length > 0 ? ((confirmed / records.length) * 100).toFixed(1) : "100.0";
-          setSuccessRate(`${rate}%`);
-        }
-      } catch (err) {
-        console.error("Failed to load dashboard executions:", err);
+        const parsed = JSON.parse(raw);
+        setWalletAddress(parsed.walletAddress || undefined);
+      } catch {
+        // Ignore invalid session JSON
       }
     }
-
-    async function loadActivePolicies() {
-      try {
-        const raw = localStorage.getItem("agentops_user_session");
-        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
-        const url = walletAddress ? `/api/keeperhub/policy?walletAddress=${walletAddress}` : "/api/keeperhub/policy";
-        const res = await fetch(url);
-        const data = await res.json();
-        // getUserPolicy always returns exactly 1 policy row per user (auto-seeded).
-        // We confirm it exists by checking the response is a valid policy object.
-        setActivePolicies(data.policy ? 1 : 0);
-      } catch (err) {
-        console.error("Failed to load active policy count:", err);
-        setActivePolicies(0);
-      }
-    }
-
-    async function loadActiveAgents() {
-      try {
-        const raw = localStorage.getItem("agentops_user_session");
-        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
-        const url = walletAddress ? `/api/keeperhub/agents?walletAddress=${walletAddress}` : "/api/keeperhub/agents";
-        const res = await fetch(url);
-        const data = await res.json();
-        // The agents endpoint always returns a fixed object with keys: analyst, security, risk.
-        // Count the keys to derive the active agent count from the actual API response shape.
-        if (data.agents && typeof data.agents === "object") {
-          setActiveAgents(Object.keys(data.agents).length);
-        } else {
-          setActiveAgents(0);
-        }
-      } catch (err) {
-        console.error("Failed to load active agent count:", err);
-        setActiveAgents(0);
-      }
-    }
-
-    loadExecutions();
-    loadActivePolicies();
-    loadActiveAgents();
   }, []);
+
+  const { data: rawExecutions = [] } = useExecutions(walletAddress);
+  const { data: policy } = usePolicy(walletAddress);
+  const { data: agentsMap } = useAgentStats(walletAddress);
+
+  const executions: ExecutionRecord[] = rawExecutions.map((e) => ({
+    id: e.id,
+    triggerDescription: e.triggerDescription,
+    status: e.status,
+    decision: e.decision,
+    amountEth: e.amountEth,
+    amountUsd: e.amountUsd,
+    timestamp: e.timestamp,
+    txHash: e.keeperhubResult?.transactionHash,
+    txLink: e.keeperhubResult?.transactionLink,
+  }));
+
+  const totalCount = executions.length;
+  const confirmedCount = executions.filter((r) => r.status === "confirmed").length;
+  const successRate = totalCount > 0 ? `${((confirmedCount / totalCount) * 100).toFixed(1)}%` : "100.0%";
+  const activePolicies = policy ? 1 : 0;
+  const activeAgents = agentsMap ? Object.keys(agentsMap).length : 3;
+
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex">

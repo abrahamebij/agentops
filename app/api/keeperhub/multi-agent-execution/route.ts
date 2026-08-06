@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     // Build a streaming SSE response.
     // The client reads events via fetch + response.body.getReader() as each stage fires.
     const encoder = new TextEncoder();
-    let streamController: ReadableStreamDefaultController<Uint8Array>;
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
 
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {

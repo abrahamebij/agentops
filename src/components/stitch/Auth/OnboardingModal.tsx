@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MdAccountBalanceWallet, MdClose } from "react-icons/md";
 import { connectViemWallet } from "@/src/lib/web3/viemClient";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface OnboardingModalProps {
 
 export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -42,6 +44,7 @@ export function OnboardingModal({ isOpen, onClose, onSuccess }: OnboardingModalP
             isAuthenticated: true,
           })
         );
+        queryClient.invalidateQueries({ queryKey: ["profile", address] });
         if (onSuccess) onSuccess();
         onClose();
         router.push("/dashboard");

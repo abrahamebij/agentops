@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import gsap from "gsap";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useExecutions, useInvalidateExecutions } from "@/src/hooks/useExecutions";
+import { usePolicy } from "@/src/hooks/usePolicy";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import {
@@ -175,9 +177,42 @@ interface LiveState {
 
 export function ExecutionsList() {
   const router = useRouter();
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("agentops_user_session");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        setWalletAddress(parsed.walletAddress || undefined);
+      } catch {
+        // Ignore invalid session JSON
+      }
+    }
+  }, []);
+
+  const { data: rawExecutions = [] } = useExecutions(walletAddress);
+  const { data: fetchedPolicy } = usePolicy(walletAddress);
+  const invalidateExecutions = useInvalidateExecutions();
+
   const [filter, setFilter] = useState<"all" | "confirmed" | "rejected">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
+  const [userPolicy, setUserPolicy] = useState<{ maxTransactionUsd: number } | null>(null);
+
+  // Sync executions state when React Query updates
+  useEffect(() => {
+    if (rawExecutions) {
+      setExecutions(mapExecutions(rawExecutions as unknown as Record<string, unknown>[]));
+    }
+  }, [rawExecutions]);
+
+  // Sync policy state when React Query updates
+  useEffect(() => {
+    if (fetchedPolicy) {
+      setUserPolicy(fetchedPolicy as { maxTransactionUsd: number });
+    }
+  }, [fetchedPolicy]);
 
   // Form modal state
   const [showForm, setShowForm] = useState(false);
@@ -185,7 +220,6 @@ export function ExecutionsList() {
   const [formAmount, setFormAmount] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const [userPolicy, setUserPolicy] = useState<{ maxTransactionUsd: number } | null>(null);
 
   // Live execution state
   const [isRunning, setIsRunning] = useState(false);
@@ -193,45 +227,6 @@ export function ExecutionsList() {
   const [showLive, setShowLive] = useState(false);
   const agentRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load executions from DB on mount
-  useEffect(() => {
-    async function loadExecutions() {
-      try {
-        const raw = localStorage.getItem("agentops_user_session");
-        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
-        const url = walletAddress
-          ? `/api/keeperhub/multi-agent-execution?walletAddress=${walletAddress}`
-          : "/api/keeperhub/multi-agent-execution";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.executions && Array.isArray(data.executions)) {
-          setExecutions(mapExecutions(data.executions));
-        }
-      } catch (err) {
-        console.error("Failed to load stored executions:", err);
-      }
-    }
-    loadExecutions();
-  }, []);
-
-  // Load policy for pre-check
-  useEffect(() => {
-    async function loadPolicy() {
-      try {
-        const raw = localStorage.getItem("agentops_user_session");
-        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
-        const url = walletAddress
-          ? `/api/keeperhub/policy?walletAddress=${walletAddress}`
-          : "/api/keeperhub/policy";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.policy) setUserPolicy(data.policy);
-      } catch {
-        // ignore
-      }
-    }
-    loadPolicy();
-  }, []);
 
   function mapExecutions(raw: Record<string, unknown>[]): ExecutionRecord[] {
     return raw.map((e) => ({
@@ -425,6 +420,7 @@ export function ExecutionsList() {
               };
               setLiveState((prev) => ({ ...prev, storedRecord: newRecord }));
               setExecutions((prev) => [newRecord, ...prev]);
+              invalidateExecutions(walletAddress);
             } else if (stage === "error" && data) {
               setLiveState((prev) => ({
                 ...prev,

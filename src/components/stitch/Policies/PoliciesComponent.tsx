@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import { MdGavel, MdEdit, MdSave, MdClose, MdCheckCircle } from "react-icons/md";
+import { usePolicy, useUpdatePolicy } from "@/src/hooks/usePolicy";
 
 // Mirrors the Policy interface from policyEngine.ts exactly.
 interface PolicyData {
@@ -24,34 +25,37 @@ const DEFAULT_POLICY_FALLBACK: PolicyData = {
 };
 
 export function PoliciesComponent() {
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("agentops_user_session");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        setWalletAddress(parsed.walletAddress || undefined);
+      } catch {
+        // Ignore invalid session JSON
+      }
+    }
+  }, []);
+
+  const { data: fetchedPolicy, isLoading: loading } = usePolicy(walletAddress);
+  const updatePolicyMutation = useUpdatePolicy();
+
   const [policy, setPolicy] = useState<PolicyData>(DEFAULT_POLICY_FALLBACK);
   const [draft, setDraft] = useState<PolicyData>(DEFAULT_POLICY_FALLBACK);
-  const [loading, setLoading] = useState<boolean>(true);
   const [editing, setEditing] = useState<boolean>(false);
-  const [saving, setSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadPolicy() {
-      try {
-        const raw = localStorage.getItem("agentops_user_session");
-        const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
-        const url = walletAddress ? `/api/keeperhub/policy?walletAddress=${walletAddress}` : "/api/keeperhub/policy";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.policy) {
-          setPolicy(data.policy);
-          setDraft(data.policy);
-        }
-      } catch (err) {
-        console.error("Failed to load policy rules from database:", err);
-      } finally {
-        setLoading(false);
+    if (fetchedPolicy) {
+      setPolicy(fetchedPolicy);
+      if (!editing) {
+        setDraft(fetchedPolicy);
       }
     }
-    loadPolicy();
-  }, []);
+  }, [fetchedPolicy, editing]);
 
   function startEdit() {
     setDraft({ ...policy });
@@ -67,40 +71,31 @@ export function PoliciesComponent() {
   }
 
   async function savePolicy() {
-    setSaving(true);
     setSaveError(null);
-    try {
-      const raw = localStorage.getItem("agentops_user_session");
-      const walletAddress = raw ? JSON.parse(raw).walletAddress : undefined;
+    if (!walletAddress) {
+      setSaveError("No connected wallet found.");
+      return;
+    }
 
-      const res = await fetch("/api/keeperhub/policy", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletAddress,
-          maxTransactionUsd: draft.maxTransactionUsd,
-          minConfidence: draft.minConfidence,
-          requiredApprovals: draft.requiredApprovals,
-        }),
+    try {
+      const updated = await updatePolicyMutation.mutateAsync({
+        walletAddress,
+        maxTransactionUsd: draft.maxTransactionUsd,
+        minConfidence: draft.minConfidence,
+        requiredApprovals: draft.requiredApprovals,
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        setSaveError(data.error || "Failed to save policy");
-        return;
-      }
-
-      setPolicy(data.policy);
-      setDraft(data.policy);
-      setEditing(false);
+      setPolicy(updated);
       setSaveSuccess(true);
+      setEditing(false);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setSaving(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save policy";
+      setSaveError(msg);
     }
   }
+
+  const saving = updatePolicyMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex">
