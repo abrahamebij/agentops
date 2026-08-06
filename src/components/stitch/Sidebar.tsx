@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { MdDashboard, MdSmartToy, MdPolicy, MdTerminal, MdSettings } from "react-icons/md";
+import { usePathname, useRouter } from "next/navigation";
+import { MdDashboard, MdSmartToy, MdPolicy, MdTerminal, MdPerson, MdSettings, MdLogout } from "react-icons/md";
 import { IconType } from "react-icons";
 
 interface NavItem {
@@ -13,13 +13,20 @@ interface NavItem {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems: NavItem[] = [
     { name: "DASHBOARD", path: "/dashboard", Icon: MdDashboard },
     { name: "AGENTS", path: "/agents", Icon: MdSmartToy },
     { name: "POLICIES", path: "/policies", Icon: MdPolicy },
     { name: "EXECUTIONS", path: "/executions", Icon: MdTerminal },
+    { name: "PROFILE", path: "/profile", Icon: MdPerson },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("agentops_user_session");
+    router.push("/");
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 border-r border-outline-variant/30 bg-surface-container-lowest z-50 flex flex-col">
@@ -53,17 +60,28 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="px-4 py-6 border-t border-outline-variant/30">
+      <div className="px-4 py-4 border-t border-outline-variant/30 flex flex-col gap-1">
         <Link
           href="/about"
-          className={`flex items-center px-4 py-3 border-l-2 ${
-            pathname === "/about" ? "bg-surface-container-high text-on-surface border-primary font-semibold" : "border-transparent text-on-surface-variant hover:bg-surface-container-low"
-          } transition-all font-label-caps text-label-caps`}
+          className={`flex items-center px-4 py-2.5 border-l-2 ${
+            pathname === "/about"
+              ? "bg-surface-container-high text-on-surface border-primary font-semibold"
+              : "border-transparent text-on-surface-variant hover:bg-surface-container-low"
+          } transition-all font-label-caps text-label-caps text-xs`}
         >
           <MdSettings className="mr-3 text-lg" />
           ABOUT
         </Link>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center w-full px-4 py-2.5 border-l-2 border-transparent text-error/80 hover:text-error hover:bg-error/10 transition-all font-label-caps text-label-caps text-xs text-left"
+        >
+          <MdLogout className="mr-3 text-lg shrink-0" />
+          LOG OUT
+        </button>
       </div>
     </aside>
   );
 }
+
