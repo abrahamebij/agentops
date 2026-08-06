@@ -39,18 +39,69 @@ export interface StoredExecutionRecord {
 }
 
 // Resolves the real Supabase profile UUID from a wallet address.
-// The wallet address is the single reliable identifier — it comes directly from
-// the wallet connection and is always stored correctly in the session.
+// Automatically provisions a profile row in public.profiles if missing.
 async function resolveUserIdFromWallet(
   supabase: ReturnType<typeof createServerClient>,
   walletAddress: string
 ): Promise<string | null> {
+  if (!walletAddress || !walletAddress.trim()) return null;
+  const cleanAddress = walletAddress.trim();
+
+  // 1. Check existing profile in public.profiles
   const { data } = await supabase
     .from("profiles")
     .select("id")
-    .ilike("wallet_address", walletAddress.trim())
+    .ilike("wallet_address", cleanAddress)
     .maybeSingle();
-  return data ? data.id : null;
+
+  if (data?.id) return data.id;
+
+  // 2. If profile missing -> auto-provision profile and auth user
+  try {
+    const dummyEmail = `${cleanAddress.toLowerCase()}@agentops.io`;
+    const dummyPassword = `Pass_${cleanAddress.slice(0, 10)}`;
+    let userId = "";
+
+    const { data: createData } = await supabase.auth.admin.createUser({
+      email: dummyEmail,
+      password: dummyPassword,
+      email_confirm: true,
+      user_metadata: {
+        wallet_address: cleanAddress,
+        full_name: "Operator",
+      },
+    });
+
+    if (createData?.user?.id) {
+      userId = createData.user.id;
+    } else {
+      const { data: listData } = await supabase.auth.admin.listUsers();
+      const foundUser = listData?.users?.find(
+        (u) => u.email?.toLowerCase() === dummyEmail.toLowerCase()
+      );
+      if (foundUser?.id) {
+        userId = foundUser.id;
+      }
+    }
+
+    if (userId) {
+      const { error: profileErr } = await supabase.from("profiles").upsert({
+        id: userId,
+        wallet_address: cleanAddress,
+        full_name: "Operator",
+        avatar_url: "",
+        updated_at: new Date().toISOString(),
+      });
+      if (!profileErr) {
+        return userId;
+      }
+      console.warn("Auto-provision profile upsert error:", profileErr.message);
+    }
+  } catch (err) {
+    console.warn("Failed to auto-provision profile in resolveUserIdFromWallet:", err);
+  }
+
+  return null;
 }
 
 export async function getExecutions(walletAddress?: string): Promise<StoredExecutionRecord[]> {
@@ -66,6 +117,9 @@ export async function getExecutions(walletAddress?: string): Promise<StoredExecu
       const resolvedId = await resolveUserIdFromWallet(supabase, walletAddress);
       if (resolvedId) {
         query = query.eq("user_id", resolvedId);
+      } else {
+        // If a wallet address is specified but could not be resolved, return empty list
+        return [];
       }
     }
 

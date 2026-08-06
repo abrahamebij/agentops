@@ -68,11 +68,6 @@ export default function OnboardingPage() {
       setErrorMsg("Please enter your display name.");
       hasError = true;
     }
-    if (!avatarBase64) {
-      setAvatarError(true);
-      if (!hasError) setErrorMsg("Please upload a profile photo.");
-      hasError = true;
-    }
     if (hasError) return;
     setNameError(false);
     setAvatarError(false);
@@ -91,6 +86,10 @@ export default function OnboardingPage() {
       });
 
       const data = await res.json();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to save profile");
+      }
 
       localStorage.setItem(
         "agentops_user_session",
@@ -183,8 +182,8 @@ export default function OnboardingPage() {
                 </div>
               )}
             </button>
-            <span className={`font-mono-data text-[10px] ${avatarError ? "text-error" : "text-on-surface-variant"}`}>
-              {avatarPreview ? "Click avatar to change" : "Upload profile photo"} <span className="text-error">*</span>
+            <span className="font-mono-data text-[10px] text-on-surface-variant">
+              {avatarPreview ? "Click avatar to change" : "Upload profile photo (optional)"}
             </span>
             <input
               ref={fileInputRef}
@@ -231,7 +230,7 @@ export default function OnboardingPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading || !fullName.trim() || !avatarBase64}
+            disabled={loading || !fullName.trim()}
             className="w-full bg-primary hover:bg-primary-container text-on-primary font-label-caps text-label-caps py-4 rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (

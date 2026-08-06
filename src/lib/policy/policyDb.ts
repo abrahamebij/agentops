@@ -12,16 +12,66 @@ export interface StoredPolicyRule {
 }
 
 // Resolves the real profile UUID from a wallet address.
+// Auto-provisions a profile row in public.profiles if missing.
 async function resolveUserIdFromWallet(
   supabase: ReturnType<typeof createServerClient>,
   walletAddress: string
 ): Promise<string | null> {
+  if (!walletAddress || !walletAddress.trim()) return null;
+  const cleanAddress = walletAddress.trim();
+
+  // 1. Check existing profile in public.profiles
   const { data } = await supabase
     .from("profiles")
     .select("id")
-    .ilike("wallet_address", walletAddress.trim())
+    .ilike("wallet_address", cleanAddress)
     .maybeSingle();
-  return data ? data.id : null;
+
+  if (data?.id) return data.id;
+
+  // 2. Auto-provision profile if missing
+  try {
+    const dummyEmail = `${cleanAddress.toLowerCase()}@agentops.io`;
+    const dummyPassword = `Pass_${cleanAddress.slice(0, 10)}`;
+    let userId = "";
+
+    const { data: createData } = await supabase.auth.admin.createUser({
+      email: dummyEmail,
+      password: dummyPassword,
+      email_confirm: true,
+      user_metadata: {
+        wallet_address: cleanAddress,
+        full_name: "Operator",
+      },
+    });
+
+    if (createData?.user?.id) {
+      userId = createData.user.id;
+    } else {
+      const { data: listData } = await supabase.auth.admin.listUsers();
+      const foundUser = listData?.users?.find(
+        (u) => u.email?.toLowerCase() === dummyEmail.toLowerCase()
+      );
+      if (foundUser?.id) {
+        userId = foundUser.id;
+      }
+    }
+
+    if (userId) {
+      const { error: profileErr } = await supabase.from("profiles").upsert({
+        id: userId,
+        wallet_address: cleanAddress,
+        full_name: "Operator",
+        avatar_url: "",
+        updated_at: new Date().toISOString(),
+      });
+      if (!profileErr) return userId;
+    }
+  } catch (err) {
+    console.warn("Failed to auto-provision profile in policyDb:", err);
+  }
+
+  return null;
 }
 
 export async function getUserPolicy(walletAddress?: string): Promise<Policy> {

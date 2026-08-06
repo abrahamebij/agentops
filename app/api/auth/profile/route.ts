@@ -1,6 +1,123 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/src/lib/supabase/server";
 
+export async function getOrCreateProfileId(
+  supabase: ReturnType<typeof createServerClient>,
+  walletAddress: string,
+  fullName?: string,
+  avatarUrl?: string
+): Promise<{ userId: string; profile: { id: string; wallet_address: string; full_name: string; avatar_url: string; role: string } }> {
+  const cleanAddress = walletAddress.trim();
+
+  // 1. Check existing profile in public.profiles
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("*")
+    .ilike("wallet_address", cleanAddress)
+    .maybeSingle();
+
+  if (existingProfile?.id) {
+    let shouldUpdate = false;
+    const updates: Record<string, string> = { updated_at: new Date().toISOString() };
+
+    if (fullName && fullName !== existingProfile.full_name && fullName !== "Operator") {
+      updates.full_name = fullName;
+      existingProfile.full_name = fullName;
+      shouldUpdate = true;
+    }
+    if (avatarUrl && avatarUrl !== existingProfile.avatar_url) {
+      updates.avatar_url = avatarUrl;
+      existingProfile.avatar_url = avatarUrl;
+      shouldUpdate = true;
+    }
+
+    if (shouldUpdate) {
+      await supabase.from("profiles").update(updates).eq("id", existingProfile.id);
+    }
+
+    return {
+      userId: existingProfile.id,
+      profile: {
+        id: existingProfile.id,
+        wallet_address: existingProfile.wallet_address,
+        full_name: existingProfile.full_name || fullName || "Operator",
+        avatar_url: existingProfile.avatar_url || avatarUrl || "",
+        role: existingProfile.role || "Operator",
+      },
+    };
+  }
+
+  // 2. Profile missing -> Create/resolve auth user
+  const dummyEmail = `${cleanAddress.toLowerCase()}@agentops.io`;
+  const dummyPassword = `Pass_${cleanAddress.slice(0, 10)}`;
+  const finalName = fullName || "Operator";
+  let userId = "";
+
+  const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+    email: dummyEmail,
+    password: dummyPassword,
+    email_confirm: true,
+    user_metadata: {
+      wallet_address: cleanAddress,
+      full_name: finalName,
+    },
+  });
+
+  if (createData?.user?.id) {
+    userId = createData.user.id;
+  } else {
+    // User may already exist in auth.users — search listUsers
+    const { data: listData } = await supabase.auth.admin.listUsers();
+    const foundUser = listData?.users?.find(
+      (u) => u.email?.toLowerCase() === dummyEmail.toLowerCase()
+    );
+    if (foundUser?.id) {
+      userId = foundUser.id;
+    } else {
+      const { data: signInData } = await supabase.auth.signInWithPassword({
+        email: dummyEmail,
+        password: dummyPassword,
+      });
+      if (signInData?.user?.id) {
+        userId = signInData.user.id;
+      }
+    }
+  }
+
+  if (!userId) {
+    throw new Error(
+      `Failed to provision auth user for wallet: ${cleanAddress}. Reason: ${createError?.message || "Auth resolution failed"}`
+    );
+  }
+
+  // 3. Upsert into public.profiles
+  const profileRecord = {
+    id: userId,
+    wallet_address: cleanAddress,
+    full_name: finalName,
+    avatar_url: avatarUrl || "",
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: profileError } = await supabase.from("profiles").upsert(profileRecord);
+
+  if (profileError) {
+    console.error("Profile upsert error:", profileError.message);
+    throw new Error(`Failed to upsert profile record into Supabase: ${profileError.message}`);
+  }
+
+  return {
+    userId,
+    profile: {
+      id: userId,
+      wallet_address: cleanAddress,
+      full_name: finalName,
+      avatar_url: avatarUrl || "",
+      role: "Operator",
+    },
+  };
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -50,31 +167,7 @@ export async function POST(req: Request) {
     const supabase = createServerClient();
     let finalAvatarUrl = avatarUrl || "";
 
-    // 1. Check existing profile first to preserve name and avatar from DB
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("*")
-      .ilike("wallet_address", walletAddress.trim())
-      .maybeSingle();
-
-    let userId = existingProfile?.id || "";
-    let finalFullName = fullName;
-
-    if (existingProfile) {
-      // Preserve existing full_name if not explicitly provided or if "Operator" fallback was sent
-      if (!fullName || fullName === "Operator") {
-        finalFullName = existingProfile.full_name || "Operator";
-      }
-      if (!finalAvatarUrl && existingProfile.avatar_url) {
-        finalAvatarUrl = existingProfile.avatar_url;
-      }
-    }
-
-    if (!finalFullName) {
-      finalFullName = "Operator";
-    }
-
-    // 2. Upload base64 image if provided
+    // 1. Upload base64 image if provided
     if (avatarBase64 && avatarBase64.startsWith("data:image")) {
       try {
         const matches = avatarBase64.match(/^data:(image\/(\w+));base64,(.+)$/);
@@ -108,58 +201,25 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Create auth user if missing
-    if (!userId) {
-      const dummyEmail = `${walletAddress.toLowerCase()}@agentops.io`;
-      const dummyPassword = `Pass_${walletAddress.slice(0, 10)}`;
-
-      const { data: adminUser } = await supabase.auth.admin.createUser({
-        email: dummyEmail,
-        password: dummyPassword,
-        email_confirm: true,
-        user_metadata: {
-          wallet_address: walletAddress,
-          full_name: finalFullName,
-        },
-      }).catch(() => ({ data: null }));
-
-      if (adminUser?.user?.id) {
-        userId = adminUser.user.id;
-      } else {
-        const { data: signInData } = await supabase.auth.signInWithPassword({
-          email: dummyEmail,
-          password: dummyPassword,
-        });
-        if (signInData?.user?.id) {
-          userId = signInData.user.id;
-        }
-      }
-    }
-
-    // 4. Upsert into public.profiles
-    if (userId) {
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: userId,
-        wallet_address: walletAddress,
-        full_name: finalFullName,
-        avatar_url: finalAvatarUrl || "",
-        updated_at: new Date().toISOString(),
-      });
-
-      if (profileError) {
-        console.error("Profile store error:", profileError.message);
-      }
-    }
+    // 2. Ensure profile exists in auth.users and public.profiles
+    const result = await getOrCreateProfileId(
+      supabase,
+      walletAddress,
+      fullName,
+      finalAvatarUrl
+    );
 
     return NextResponse.json({
       success: true,
-      userId: userId || walletAddress,
-      walletAddress,
-      fullName: finalFullName,
-      avatarUrl: finalAvatarUrl,
+      userId: result.userId,
+      walletAddress: result.profile.wallet_address,
+      fullName: result.profile.full_name,
+      avatarUrl: result.profile.avatar_url,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Profile setup failed";
+    console.error("POST /api/auth/profile error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
