@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
@@ -22,41 +22,45 @@ export function ProfileComponent() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
-  const [fullName, setFullName] = useState<string>("");
+  const [walletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).walletAddress || undefined;
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return undefined;
+  });
+
+  const { data: profile } = useProfile(walletAddress);
+  const updateProfileMutation = useUpdateProfile();
+
+  const [fullName, setFullName] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).fullName || "";
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return "";
+  });
+
   const [avatarBase64, setAvatarBase64] = useState<string>("");
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.walletAddress) {
-          setWalletAddress(parsed.walletAddress);
-          setFullName(parsed.fullName || "");
-          setAvatarPreview(parsed.avatarUrl || "");
-        }
-      } catch {
-        // Ignore invalid session JSON
-      }
-    }
-  }, []);
-
-  const { data: profile, isLoading } = useProfile(walletAddress);
-  const updateProfileMutation = useUpdateProfile();
-
-  useEffect(() => {
-    if (profile) {
-      setFullName(profile.fullName || "");
-      if (profile.avatarUrl) {
-        setAvatarPreview(profile.avatarUrl);
-      }
-    }
-  }, [profile]);
+  const effectiveFullName = fullName || profile?.fullName || "";
+  const effectiveAvatar = avatarPreview || profile?.avatarUrl || "";
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -178,10 +182,10 @@ export function ProfileComponent() {
                       onClick={() => fileInputRef.current?.click()}
                       className="relative w-24 h-24 rounded-full overflow-hidden flex items-center justify-center border-2 border-dashed border-primary/40 hover:border-primary transition-all group bg-primary/10 shrink-0"
                     >
-                      {avatarPreview ? (
+                      {effectiveAvatar ? (
                         <>
                           <img
-                            src={avatarPreview}
+                            src={effectiveAvatar}
                             alt="Avatar preview"
                             className="w-full h-full object-cover"
                           />
@@ -232,7 +236,7 @@ export function ProfileComponent() {
                     </label>
                     <input
                       type="text"
-                      value={fullName}
+                      value={fullName !== "" ? fullName : effectiveFullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Alice Chen"
                       maxLength={64}
@@ -250,7 +254,7 @@ export function ProfileComponent() {
                   <div className="flex items-center gap-4 pt-1">
                     <button
                       type="submit"
-                      disabled={updateProfileMutation.isPending || !fullName.trim()}
+                      disabled={updateProfileMutation.isPending || !effectiveFullName.trim()}
                       className="bg-primary hover:bg-primary-container text-on-primary font-label-caps text-label-caps px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {updateProfileMutation.isPending ? (

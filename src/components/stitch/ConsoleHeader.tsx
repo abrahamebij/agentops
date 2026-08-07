@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { MdSearch, MdNotifications } from "react-icons/md";
 import { useProfile } from "@/src/hooks/useProfile";
 
@@ -12,42 +11,53 @@ interface UserSession {
 }
 
 export function ConsoleHeader() {
-  const router = useRouter();
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
-  const [userSession, setUserSession] = useState<UserSession | null>(null);
-  const [imageError, setImageError] = useState<boolean>(false);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.walletAddress) {
-          setWalletAddress(parsed.walletAddress);
-          setUserSession({
-            fullName: parsed.fullName || "",
-            avatarUrl: parsed.avatarUrl || "",
-            walletAddress: parsed.walletAddress || "",
-          });
+  const [walletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).walletAddress || undefined;
+        } catch {
+          // ignore
         }
-      } catch {
-        // Ignore invalid session JSON
       }
     }
-  }, []);
+    return undefined;
+  });
 
-  const { data: profile, isLoading } = useProfile(walletAddress);
+  const [userSession] = useState<UserSession | null>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.walletAddress) {
+            return {
+              fullName: parsed.fullName || "",
+              avatarUrl: parsed.avatarUrl || "",
+              walletAddress: parsed.walletAddress || "",
+            };
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return null;
+  });
+
+  const [imageError, setImageError] = useState<boolean>(false);
+
+  const { data: profile } = useProfile(walletAddress);
   
   useEffect(() => {
-    console.log('profile: ', profile);
     if (profile) {
       const liveProfile = {
         fullName: profile.fullName || "",
         avatarUrl: profile.avatarUrl || "",
         walletAddress: profile.walletAddress || walletAddress || "",
       };
-      setUserSession(liveProfile);
-
+      
       const raw = localStorage.getItem("agentops_user_session");
       if (raw) {
         try {

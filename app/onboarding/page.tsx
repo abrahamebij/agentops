@@ -14,7 +14,19 @@ export default function OnboardingPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [walletAddress, setWalletAddress] = useState<string>("");
+  const [walletAddress] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).walletAddress || "";
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return "";
+  });
   const [fullName, setFullName] = useState<string>("");
   const [avatarBase64, setAvatarBase64] = useState<string>("");
   const [avatarPreview, setAvatarPreview] = useState<string>("");
@@ -26,22 +38,16 @@ export default function OnboardingPage() {
   useEffect(() => {
     const raw = localStorage.getItem("agentops_user_session");
     if (!raw) {
-      // No session — redirect to home
       router.replace("/");
       return;
     }
     try {
       const parsed = JSON.parse(raw);
       if (parsed.isAuthenticated) {
-        // Already fully set up — go to dashboard
         router.replace("/dashboard");
-        return;
-      }
-      if (!parsed.walletAddress) {
+      } else if (!parsed.walletAddress) {
         router.replace("/");
-        return;
       }
-      setWalletAddress(parsed.walletAddress);
     } catch {
       router.replace("/");
     }

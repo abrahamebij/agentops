@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import { MdGavel, MdEdit, MdSave, MdClose, MdCheckCircle } from "react-icons/md";
@@ -25,37 +25,28 @@ const DEFAULT_POLICY_FALLBACK: PolicyData = {
 };
 
 export function PoliciesComponent() {
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setWalletAddress(parsed.walletAddress || undefined);
-      } catch {
-        // Ignore invalid session JSON
+  const [walletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).walletAddress || undefined;
+        } catch {
+          // ignore
+        }
       }
     }
-  }, []);
+    return undefined;
+  });
 
   const { data: fetchedPolicy, isLoading: loading } = usePolicy(walletAddress);
   const updatePolicyMutation = useUpdatePolicy();
 
-  const [policy, setPolicy] = useState<PolicyData>(DEFAULT_POLICY_FALLBACK);
+  const policy = fetchedPolicy || DEFAULT_POLICY_FALLBACK;
   const [draft, setDraft] = useState<PolicyData>(DEFAULT_POLICY_FALLBACK);
   const [editing, setEditing] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (fetchedPolicy) {
-      setPolicy(fetchedPolicy);
-      if (!editing) {
-        setDraft(fetchedPolicy);
-      }
-    }
-  }, [fetchedPolicy, editing]);
 
   function startEdit() {
     setDraft({ ...policy });

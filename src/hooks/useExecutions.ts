@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StoredExecutionRecord } from "../lib/db/executionsStore";
 
 export function useExecutions(walletAddress?: string) {

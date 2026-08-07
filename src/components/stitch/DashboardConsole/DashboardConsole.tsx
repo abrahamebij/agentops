@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
@@ -22,19 +22,19 @@ interface ExecutionRecord {
 }
 
 export function DashboardConsole() {
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setWalletAddress(parsed.walletAddress || undefined);
-      } catch {
-        // Ignore invalid session JSON
+  const [walletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).walletAddress || undefined;
+        } catch {
+          // ignore
+        }
       }
     }
-  }, []);
+    return undefined;
+  });
 
   const { data: rawExecutions = [] } = useExecutions(walletAddress);
   const { data: policy } = usePolicy(walletAddress);

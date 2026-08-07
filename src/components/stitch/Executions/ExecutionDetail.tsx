@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
@@ -64,19 +64,19 @@ interface MultiAgentExecutionData {
 import { useExecutionDetail } from "@/src/hooks/useExecutions";
 
 export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: string }) {
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setWalletAddress(parsed.walletAddress || undefined);
-      } catch {
-        // Ignore invalid session JSON
+  const [walletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).walletAddress || undefined;
+        } catch {
+          // ignore
+        }
       }
     }
-  }, []);
+    return undefined;
+  });
 
   const { data: rec } = useExecutionDetail(executionId, walletAddress);
 
@@ -86,39 +86,34 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
     security: boolean;
     risk: boolean;
   }>({ analyst: true, security: true, risk: true });
-  const [executionData, setExecutionData] = useState<MultiAgentExecutionData | null>(null);
-  const [executorStep, setExecutorStep] = useState<"idle" | "simulating" | "broadcasting" | "confirmed" | "failed">("idle");
+  const [liveExecutionData, setLiveExecutionData] = useState<MultiAgentExecutionData | null>(null);
+  const [liveExecutorStep, setLiveExecutorStep] = useState<"idle" | "simulating" | "broadcasting" | "confirmed" | "failed">("idle");
 
-  useEffect(() => {
-    if (rec) {
-      setExecutionData({
-        triggerDescription: rec.triggerDescription,
-        txDetails: {
-          chainId: 11155111,
-          recipientAddress: rec.recipientAddress,
-          amountEth: rec.amountEth,
-          actionType: "transfer",
-        },
-        panelResult: rec.panelResult,
-        consensusResult: rec.consensusResult,
-        policyResult: rec.policyResult,
-        executed: rec.executed,
-        keeperhubResult: rec.keeperhubResult,
-      });
-      if (rec.executed) {
-        setExecutorStep("confirmed");
-      } else {
-        setExecutorStep("failed");
-      }
-    }
-  }, [rec]);
+  const executionData: MultiAgentExecutionData | null = liveExecutionData || (rec ? {
+    triggerDescription: rec.triggerDescription,
+    txDetails: {
+      chainId: 11155111,
+      recipientAddress: rec.recipientAddress,
+      amountEth: rec.amountEth,
+      actionType: "transfer",
+    },
+    panelResult: rec.panelResult,
+    consensusResult: rec.consensusResult,
+    policyResult: rec.policyResult,
+    executed: rec.executed,
+    keeperhubResult: rec.keeperhubResult,
+  } : null);
+
+  const executorStep = liveExecutorStep !== "idle"
+    ? liveExecutorStep
+    : (rec ? (rec.executed ? "confirmed" : "failed") : "idle");
 
 
   const triggerLiveExecution = async () => {
     setIsRunning(true);
     setRevealedAgents({ analyst: false, security: false, risk: false });
-    setExecutorStep("idle");
-    setExecutionData(null);
+    setLiveExecutorStep("idle");
+    setLiveExecutionData(null);
 
     try {
       const res = await fetch("/api/keeperhub/multi-agent-execution", {
@@ -132,7 +127,7 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
       });
 
       const data: MultiAgentExecutionData = await res.json();
-      setExecutionData(data);
+      setLiveExecutionData(data);
 
       // Staged reveal sequence
       setRevealedAgents({ analyst: true, security: false, risk: false });
@@ -143,17 +138,17 @@ export function ExecutionDetail({ executionId = "T-84920" }: { executionId?: str
 
       // Real KeeperHub Executor status transition
       if (data.executed && data.keeperhubResult) {
-        setExecutorStep("simulating");
+        setLiveExecutorStep("simulating");
         await new Promise((r) => setTimeout(r, 800));
-        setExecutorStep("broadcasting");
+        setLiveExecutorStep("broadcasting");
         await new Promise((r) => setTimeout(r, 1200));
-        setExecutorStep("confirmed");
+        setLiveExecutorStep("confirmed");
       } else {
-        setExecutorStep("failed");
+        setLiveExecutorStep("failed");
       }
     } catch (err) {
       console.error("Multi-agent execution failed:", err);
-      setExecutorStep("failed");
+      setLiveExecutorStep("failed");
     } finally {
       setIsRunning(false);
     }

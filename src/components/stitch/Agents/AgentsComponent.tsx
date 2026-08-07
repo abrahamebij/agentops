@@ -1,32 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sidebar } from "../Sidebar";
 import { ConsoleHeader } from "../ConsoleHeader";
 import { MdAccountTree } from "react-icons/md";
 import { useAgentStats } from "@/src/hooks/useAgents";
 
-interface AgentStats {
-  approvalRate: string;
-  totalExecutions: number;
-  latencyMs: number;
-  version: string;
-}
-
 export function AgentsComponent() {
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        setWalletAddress(parsed.walletAddress || undefined);
-      } catch {
-        // Ignore invalid session JSON
+  const [walletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          return JSON.parse(raw).walletAddress || undefined;
+        } catch {
+          // Ignore invalid session JSON
+        }
       }
     }
-  }, []);
+    return undefined;
+  });
 
   const { data: fetchedStats } = useAgentStats(walletAddress);
 

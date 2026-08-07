@@ -20,36 +20,51 @@ export function PublicHeader() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [imageError, setImageError] = useState<boolean>(false);
-  const [walletAddress, setWalletAddress] = useState<string | undefined>(undefined);
-  const [userSession, setUserSession] = useState<UserSession | null>(null);
 
-  useEffect(() => {
-    const raw = localStorage.getItem("agentops_user_session");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.isAuthenticated && parsed.walletAddress) {
-          setWalletAddress(parsed.walletAddress);
-          setUserSession(parsed);
+  const [walletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.isAuthenticated && parsed.walletAddress) {
+            return parsed.walletAddress;
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // Ignore invalid session JSON
       }
     }
-  }, []);
+    return undefined;
+  });
+
+  const [userSession, setUserSession] = useState<UserSession | null>(() => {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem("agentops_user_session");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.isAuthenticated && parsed.walletAddress) {
+            return parsed;
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return null;
+  });
 
   const { data: profile } = useProfile(walletAddress);
 
-  useEffect(() => {
-    if (profile) {
-      setUserSession({
+  const effectiveSession: UserSession | null = profile
+    ? {
         fullName: profile.fullName || userSession?.fullName || "",
         avatarUrl: profile.avatarUrl || userSession?.avatarUrl || "",
-        walletAddress: profile.walletAddress || walletAddress || "",
+        walletAddress: profile.walletAddress || walletAddress || userSession?.walletAddress || "",
         isAuthenticated: true,
-      });
-    }
-  }, [profile, walletAddress]);
+      }
+    : userSession;
 
   useEffect(() => {
     const handleOpenOnboarding = () => setIsModalOpen(true);
@@ -60,15 +75,15 @@ export function PublicHeader() {
   const handleLaunchClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsMobileMenuOpen(false);
-    if (userSession?.isAuthenticated) {
+    if (effectiveSession?.isAuthenticated) {
       router.push("/dashboard");
     } else {
       setIsModalOpen(true);
     }
   };
 
-  const displayName = userSession?.fullName || userSession?.walletAddress
-    ? (userSession?.fullName || `${userSession?.walletAddress?.slice(0, 6)}...${userSession?.walletAddress?.slice(-4)}`)
+  const displayName = effectiveSession?.fullName || effectiveSession?.walletAddress
+    ? (effectiveSession?.fullName || `${effectiveSession?.walletAddress?.slice(0, 6)}...${effectiveSession?.walletAddress?.slice(-4)}`)
     : "";
 
   return (
@@ -98,16 +113,16 @@ export function PublicHeader() {
               ABOUT
             </Link>
 
-            {userSession?.isAuthenticated ? (
+            {effectiveSession?.isAuthenticated ? (
               <div className="flex items-center gap-3">
                 <Link
                   href="/dashboard"
                   className="flex items-center gap-2.5 px-3.5 py-1.5 bg-surface-container hover:bg-surface-container-high rounded-full border border-outline-variant/30 text-on-surface transition-colors"
                 >
                   <div className="w-6 h-6 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center border border-primary/40 shrink-0">
-                    {userSession.avatarUrl && !imageError ? (
+                    {effectiveSession.avatarUrl && !imageError ? (
                       <img
-                        src={userSession.avatarUrl}
+                        src={effectiveSession.avatarUrl}
                         alt="Avatar"
                         onError={() => setImageError(true)}
                         className="w-full h-full object-cover"
@@ -154,16 +169,16 @@ export function PublicHeader() {
               ABOUT
             </Link>
 
-            {userSession?.isAuthenticated ? (
+            {effectiveSession?.isAuthenticated ? (
               <Link
                 href="/dashboard"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="flex items-center gap-3 p-3 bg-surface-container-high rounded-xl border border-outline-variant/30 text-on-surface"
               >
                 <div className="w-8 h-8 rounded-full bg-primary/20 overflow-hidden flex items-center justify-center border border-primary/40 shrink-0">
-                  {userSession.avatarUrl && !imageError ? (
+                  {effectiveSession.avatarUrl && !imageError ? (
                     <img
-                      src={userSession.avatarUrl}
+                      src={effectiveSession.avatarUrl}
                       alt="Avatar"
                       onError={() => setImageError(true)}
                       className="w-full h-full object-cover"

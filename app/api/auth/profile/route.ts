@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/src/lib/supabase/server";
 
-export function getDefaultAvatarUrl(walletAddress: string, name?: string): string {
+export function getDefaultAvatarUrl(walletAddress: string): string {
   const seed = walletAddress.trim().toLowerCase();
   return `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
 }
@@ -13,7 +13,7 @@ export async function getOrCreateProfileId(
   avatarUrl?: string
 ): Promise<{ userId: string; profile: { id: string; wallet_address: string; full_name: string; avatar_url: string; role: string } }> {
   const cleanAddress = walletAddress.trim();
-  const defaultAvatar = getDefaultAvatarUrl(cleanAddress, fullName);
+  const defaultAvatar = getDefaultAvatarUrl(cleanAddress);
 
   // 1. Check existing profile in public.profiles
   const { data: existingProfile } = await supabase
