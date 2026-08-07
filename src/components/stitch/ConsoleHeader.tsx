@@ -48,7 +48,7 @@ export function ConsoleHeader() {
 
   const [imageError, setImageError] = useState<boolean>(false);
 
-  const { data: profile } = useProfile(walletAddress);
+  const { data: profile, isLoading } = useProfile(walletAddress);
   
   useEffect(() => {
     if (profile) {
