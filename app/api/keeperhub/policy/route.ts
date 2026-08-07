@@ -14,7 +14,15 @@ export async function GET(req: Request) {
   }
 }
 
+export async function POST(req: Request) {
+  return handleUpdatePolicy(req);
+}
+
 export async function PATCH(req: Request) {
+  return handleUpdatePolicy(req);
+}
+
+async function handleUpdatePolicy(req: Request) {
   try {
     const body = await req.json();
     const walletAddress = body.walletAddress as string | undefined;

@@ -166,11 +166,33 @@ export async function updateUserPolicy(
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    const { data: existing } = await supabase
       .from("policy_rules")
-      .upsert(updateData, { onConflict: "user_id" })
-      .select("*")
-      .single();
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let data;
+    let error;
+
+    if (existing?.id) {
+      const res = await supabase
+        .from("policy_rules")
+        .update(updateData)
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      data = res.data;
+      error = res.error;
+    } else {
+      const res = await supabase
+        .from("policy_rules")
+        .insert(updateData)
+        .select("*")
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error || !data) {
       console.error("Failed to update policy:", error?.message);

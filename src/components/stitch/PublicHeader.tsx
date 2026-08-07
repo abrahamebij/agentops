@@ -78,9 +78,12 @@ export function PublicHeader() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="font-headline-md text-headline-md tracking-tight text-on-surface hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
             >
-              AgentOps
+              <img src="/logo.png" alt="AgentOps Logo" className="h-7 w-auto object-contain" />
+              <span className="font-headline-md text-headline-md tracking-tight text-on-surface">
+                AgentOps
+              </span>
             </Link>
           </div>
 
